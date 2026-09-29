@@ -71,7 +71,7 @@ def get_user(user_id: int, _: User = Depends(get_current_user), db: Session = De
 
 @router.get("/{user_id}/reviews", response_model=list[ReviewOut])
 def user_reviews(user_id: int, _: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Portafolio verificable: evaluaciones recibidas en retos reales."""
+    """Portafolio verificable: evaluaciones recibidas en problemáticas reales."""
     get_or_404(db, User, user_id, "Usuario")
     return db.scalars(select(Review).where(Review.reviewee_id == user_id)
                       .order_by(Review.created_at.desc())).all()

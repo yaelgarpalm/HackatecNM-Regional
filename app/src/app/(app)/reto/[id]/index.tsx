@@ -19,7 +19,7 @@ const TRANSITIONS: Record<ChallengeStatus, ChallengeStatus[]> = {
   cancelado: [],
 };
 const TRANSITION_TEXT: Record<string, string> = {
-  abierto: 'Publicar', borrador: 'Volver a borrador', cancelado: 'Cancelar reto', finalizado: 'Marcar como finalizado',
+  abierto: 'Publicar', borrador: 'Volver a borrador', cancelado: 'Cancelar problemática', finalizado: 'Marcar como finalizado',
 };
 
 function Info({ icon, title, value }: { icon: any; title: string; value?: string | null }) {
@@ -58,7 +58,7 @@ export default function RetoDetalle() {
 
   return (
     <Screen onRefresh={() => { q.refetch(); props.refetch(); }} refreshing={q.isRefetching}>
-      <Stack.Screen options={{ title: `Reto #${ch.id}` }} />
+      <Stack.Screen options={{ title: `Problemática #${ch.id}` }} />
 
       <Row gap={6}>
         <StatusBadge status={ch.status} />
@@ -66,7 +66,7 @@ export default function RetoDetalle() {
         <Badge text={ch.category} tone="primary" />
       </Row>
       <Title>{ch.title}</Title>
-      <Muted>{ch.organization_name} · publicado {shortDate(ch.created_at)}</Muted>
+      <Muted>{ch.organization_name} · publicada {shortDate(ch.created_at)}</Muted>
       <Body style={{ marginTop: 10, fontSize: 16 }}>{ch.summary}</Body>
 
       <Section title="Descripción del problema">
@@ -77,7 +77,7 @@ export default function RetoDetalle() {
               <H2>Información confidencial</H2>
             </Row>
             <Body style={{ marginTop: 6 }}>
-              La organización protege los detalles de este reto. Para verlos debes aceptar el acuerdo de confidencialidad
+              La organización protege los detalles de esta problemática. Para verlos debes aceptar el acuerdo de confidencialidad
               (NDA): te comprometes a no divulgar la información fuera de la plataforma ni del equipo.
             </Body>
             <Button title="Acepto el acuerdo de confidencialidad" icon="document-lock-outline" loading={nda.isPending}
@@ -129,7 +129,7 @@ export default function RetoDetalle() {
 
       {/* ---------- Dueño del reto ---------- */}
       {isOwner && (
-        <Section title="Administrar reto">
+        <Section title="Administrar problemática">
           <Row>
             <Button title={`Postulaciones (${ch.proposals_count})`} icon="people-outline" onPress={() => router.push(`/reto/${id}/postulaciones`)} />
             <Button title="Sugerencias de talento y laboratorios" variant="secondary" icon="sparkles-outline"

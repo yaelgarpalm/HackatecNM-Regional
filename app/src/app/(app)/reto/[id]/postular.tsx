@@ -67,7 +67,7 @@ export default function Postular() {
           <Field label="Plan de trabajo (opcional)" value={plan} onChangeText={setPlan} multiline />
           <Field label="Semanas estimadas" value={weeks} onChangeText={setWeeks} keyboardType="number-pad" />
           <Body style={{ marginBottom: 10, fontSize: 13, color: colors.muted }}>
-            Al postular, todos los integrantes quedan cubiertos por el acuerdo de confidencialidad del reto.
+            Al postular, todos los integrantes quedan cubiertos por el acuerdo de confidencialidad de la problemática.
           </Body>
           <Button title="Enviar postulación" icon="paper-plane-outline" loading={submit.isPending}
             disabled={!teamId || approach.trim().length < 20} onPress={() => submit.mutate(undefined)} />

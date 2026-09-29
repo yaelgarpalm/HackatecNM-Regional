@@ -24,17 +24,17 @@ function LinkRow({ icon, text, href }: { icon: IconName; text: string; href: Hre
   );
 }
 
-/** Postulaciones que los equipos de estudiantes enviaron a los retos de la organización. */
+/** Postulaciones que los equipos de estudiantes enviaron a las problemáticas de la organización. */
 function PostulacionesRecibidas() {
   const q = useApi<Proposal[]>('/proposals/received');
   return (
     <Section title={`Postulaciones recibidas${q.data ? ` (${q.data.length})` : ''}`}>
       {q.isLoading ? <Loading /> : q.error ? <ErrorView error={q.error} onRetry={q.refetch} /> :
-        !q.data?.length ? <Empty text="Todavía no recibes postulaciones en tus retos." icon="people-outline" /> :
+        !q.data?.length ? <Empty text="Todavía no recibes postulaciones en tus problemáticas." icon="people-outline" /> :
         q.data.map((p) => (
           <Card key={p.id} onPress={() => router.push(`/reto/${p.challenge_id}/postulaciones`)}>
             <Row style={{ justifyContent: 'space-between' }}>
-              <H2 style={{ flex: 1 }}>{p.challenge_title ?? `Reto #${p.challenge_id}`}</H2>
+              <H2 style={{ flex: 1 }}>{p.challenge_title ?? `Problemática #${p.challenge_id}`}</H2>
               <StatusBadge status={p.status} />
             </Row>
             <Muted>Equipo {p.team?.name} · enviada {shortDate(p.created_at)}</Muted>

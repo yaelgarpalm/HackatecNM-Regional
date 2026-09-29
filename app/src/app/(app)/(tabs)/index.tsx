@@ -48,11 +48,11 @@ function AcademicHome({ user }: { user: User }) {
 
       <Section title="Mis postulaciones" action={<Button small variant="ghost" title="Mis equipos" onPress={() => router.push('/equipos')} />}>
         {mine.isLoading ? <Loading /> : mine.error ? <ErrorView error={mine.error} onRetry={mine.refetch} /> :
-          !mine.data?.length ? <Muted>Aún no te postulas a ningún reto.</Muted> :
+          !mine.data?.length ? <Muted>Aún no te postulas a ninguna problemática.</Muted> :
           mine.data.map((p) => (
             <Card key={p.id} onPress={() => router.push(`/reto/${p.challenge_id}`)}>
               <Row style={{ justifyContent: 'space-between' }}>
-                <H2 style={{ flex: 1 }}>{p.challenge_title ?? `Reto #${p.challenge_id}`}</H2>
+                <H2 style={{ flex: 1 }}>{p.challenge_title ?? `Problemática #${p.challenge_id}`}</H2>
                 <StatusBadge status={p.status} />
               </Row>
               <Muted>Equipo {p.team?.name}</Muted>
@@ -61,9 +61,9 @@ function AcademicHome({ user }: { user: User }) {
           ))}
       </Section>
 
-      <Section title="Retos recomendados para ti">
+      <Section title="Problemáticas recomendadas para ti">
         {recs.isLoading ? <Loading /> : recs.error ? <ErrorView error={recs.error} onRetry={recs.refetch} /> :
-          !recs.data?.length ? <Empty text="No hay retos que coincidan con tu perfil todavía. Revisa el tablero completo." icon="bulb-outline" /> :
+          !recs.data?.length ? <Empty text="No hay problemáticas que coincidan con tu perfil todavía. Revisa el tablero completo." icon="bulb-outline" /> :
           recs.data.map((m) => (
             <ChallengeCard key={m.challenge.id} ch={m.challenge}>
               <Card style={{ marginTop: 10, marginBottom: 0, backgroundColor: '#F8FAFC' }}>
@@ -87,19 +87,19 @@ function PublisherHome({ user }: { user: User }) {
   return (
     <Screen onRefresh={q.refetch} refreshing={q.isRefetching}>
       <Hello user={user} text="Publica los problemas de tu organización y recibe propuestas de equipos universitarios." />
-      <Button title="Publicar un reto" icon="add-circle-outline" onPress={() => router.push('/publicar')}
+      <Button title="Publicar una problemática" icon="add-circle-outline" onPress={() => router.push('/publicar')}
         style={{ marginTop: 14, alignSelf: 'flex-start' }} />
 
       <Row style={{ marginTop: 16 }} gap={10}>
-        <Stat value={count('abierto')} text="Abiertos" icon="megaphone-outline" />
+        <Stat value={count('abierto')} text="Abiertas" icon="megaphone-outline" />
         <Stat value={count('en_progreso')} text="En progreso" icon="construct-outline" />
-        <Stat value={count('finalizado')} text="Finalizados" icon="checkmark-done-outline" />
+        <Stat value={count('finalizado')} text="Finalizadas" icon="checkmark-done-outline" />
         <Stat value={items.reduce((a, c) => a + c.proposals_count, 0)} text="Postulaciones" icon="people-outline" />
       </Row>
 
-      <Section title="Mis retos">
+      <Section title="Mis problemáticas">
         {q.isLoading ? <Loading /> : q.error ? <ErrorView error={q.error} onRetry={q.refetch} /> :
-          !items.length ? <Empty text="Todavía no publicas retos." /> :
+          !items.length ? <Empty text="Todavía no publicas problemáticas." /> :
           items.map((c) => <ChallengeCard key={c.id} ch={c} />)}
       </Section>
     </Screen>
@@ -124,7 +124,7 @@ function UniversityHome({ user }: { user: User }) {
       )}
       <Row style={{ marginTop: 16 }}>
         <Button title="Publicar capacidad" icon="add-circle-outline" onPress={() => router.push('/capacidad')} />
-        <Button title="Ver retos abiertos" variant="secondary" onPress={() => router.push('/retos')} />
+        <Button title="Ver problemáticas abiertas" variant="secondary" onPress={() => router.push('/retos')} />
         <Button title="Indicadores globales" variant="secondary" onPress={() => router.push('/indicadores')} />
       </Row>
     </Screen>

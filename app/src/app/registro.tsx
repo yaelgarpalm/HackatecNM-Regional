@@ -13,10 +13,10 @@ const ORG_FOR_ROLE: Record<string, 'empresa' | 'universidad' | 'gobierno'> = {
   empresa: 'empresa', gobierno: 'gobierno', universidad: 'universidad', estudiante: 'universidad', academico: 'universidad',
 };
 const ROLE_HELP: Record<string, string> = {
-  estudiante: 'Forma equipos multidisciplinarios y resuelve retos reales (residencia, servicio social, tesis…).',
+  estudiante: 'Forma equipos multidisciplinarios y resuelve problemáticas reales (residencia, servicio social, tesis…).',
   academico: 'Asesora equipos y ofrece tu experiencia como consultor.',
   empresa: 'Publica los problemas de tu negocio y recibe propuestas de equipos universitarios.',
-  gobierno: 'Publica retos públicos del municipio o dependencia.',
+  gobierno: 'Publica problemáticas públicas del municipio o dependencia.',
   universidad: 'Oficina de vinculación: publica laboratorios, equipo y expertos; mide tus indicadores.',
 };
 
@@ -71,7 +71,7 @@ export default function Registro() {
               <Field label="Semestre" value={f.semester} onChangeText={set('semester')} keyboardType="number-pad" />
             )}
             <Field label="Habilidades" value={f.skills} onChangeText={set('skills')} placeholder="Python, IoT, Diseño"
-              hint="Separadas por comas. Se usan para recomendarte retos." />
+              hint="Separadas por comas. Se usan para recomendarte problemáticas." />
           </>
         )}
       </Card>

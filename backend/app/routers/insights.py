@@ -21,7 +21,7 @@ router = APIRouter(tags=["Recomendaciones e indicadores"])
 def recommended_challenges(limit: int = Query(10, le=50),
                            user: User = Depends(require_roles(Role.ESTUDIANTE, Role.ACADEMICO)),
                            db: Session = Depends(get_db)):
-    """Retos abiertos ordenados por afinidad con la carrera y habilidades del usuario."""
+    """Problemáticas abiertas ordenadas por afinidad con la carrera y habilidades del usuario."""
     results = []
     for ch in db.scalars(select(Challenge).where(Challenge.status == ChallengeStatus.ABIERTO)):
         score, reasons = score_challenge_for_user(user, ch)

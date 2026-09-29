@@ -54,16 +54,16 @@ function ChallengeForm({ id, initial }: { id?: string; initial: typeof EMPTY }) 
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: editing ? 'Editar reto' : 'Publicar reto' }} />
+      <Stack.Screen options={{ title: editing ? 'Editar problemática' : 'Publicar problemática' }} />
       <Muted>Describe el problema en lenguaje sencillo: qué pasa, cómo te afecta y qué resultado esperas.</Muted>
 
       <Section title="El problema">
         <Card>
           <Field label="Título" value={f.title} onChangeText={set('title')} placeholder="Monitoreo de temperatura en hornos" />
           <Field label="Resumen público" value={f.summary} onChangeText={set('summary')} multiline
-            hint="Siempre visible, incluso si el reto es confidencial (10–500 caracteres)." />
+            hint="Siempre visible, incluso si la problemática es confidencial (10–500 caracteres)." />
           <Field label="Descripción detallada" value={f.description} onChangeText={set('description')} multiline
-            hint="Si el reto es confidencial, solo la ve quien acepte el NDA." />
+            hint="Si la problemática es confidencial, solo la ve quien acepte el NDA." />
           <Field label="Categoría" value={f.category} onChangeText={set('category')} placeholder="IoT, Comercio electrónico, Logística…" />
           <Field label="Etiquetas" value={f.tags} onChangeText={set('tags')} placeholder="sensores, temperatura, inventarios"
             hint="Separadas por comas. Se usan para sugerir talento y laboratorios." />

@@ -51,7 +51,7 @@ export default function Evaluar() {
       <Stack.Screen options={{ title: 'Evaluar' }} />
       <H2>{ch.data?.title}</H2>
       <Muted style={{ marginBottom: 12 }}>
-        Las evaluaciones construyen la reputación de estudiantes y organizaciones y generan confianza para futuros retos.
+        Las evaluaciones construyen la reputación de estudiantes y organizaciones y generan confianza para futuras problemáticas.
       </Muted>
       {q.isLoading ? <Loading /> : q.error ? <ErrorView error={q.error} /> :
         q.data?.filter((p) => p.id !== user.id).map((p) => <ReviewCard key={p.id} chId={id} person={p} />)}

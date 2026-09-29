@@ -28,9 +28,9 @@ export default function Retos() {
   return (
     <Screen onRefresh={r.refetch} refreshing={r.isRefetching}>
       <Row style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-        <Muted>Problemas reales publicados por empresas y gobierno</Muted>
+        <Muted>Problemáticas reales publicadas por empresas y gobierno</Muted>
         {isOrgPublisher(user) && (
-          <Button small title="Publicar reto" icon="add" onPress={() => router.push('/publicar')} />
+          <Button small title="Publicar problemática" icon="add" onPress={() => router.push('/publicar')} />
         )}
       </Row>
 
@@ -39,7 +39,7 @@ export default function Retos() {
       <Row gap={8} style={{ marginTop: -4, marginBottom: 8 }}>
         <Button small title="Buscar" icon="search" onPress={() => { setSearch(q); setPage(1); }} />
         {isOrgPublisher(user) && (
-          <Button small variant={mine ? 'primary' : 'secondary'} title="Solo mis retos"
+          <Button small variant={mine ? 'primary' : 'secondary'} title="Solo mis problemáticas"
             onPress={() => { setMine(!mine); setStatus(null); setPage(1); }} />
         )}
       </Row>
@@ -51,7 +51,7 @@ export default function Retos() {
       {r.isLoading ? <Loading /> : r.error ? <ErrorView error={r.error} onRetry={r.refetch} /> : (
         <>
           <Muted style={{ marginBottom: 8 }}>{r.data?.total ?? 0} resultado(s)</Muted>
-          {!r.data?.items.length ? <Empty text="No hay retos con esos filtros." icon="search-outline" /> :
+          {!r.data?.items.length ? <Empty text="No hay problemáticas con esos filtros." icon="search-outline" /> :
             r.data.items.map((c) => <ChallengeCard key={c.id} ch={c} />)}
           {(r.data?.pages ?? 0) > 1 && (
             <Row style={{ justifyContent: 'center', marginTop: 8 }}>

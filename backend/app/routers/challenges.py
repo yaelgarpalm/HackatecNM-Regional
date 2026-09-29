@@ -1,4 +1,4 @@
-"""Retos: publicación, NDA, postulaciones, seguimiento, mensajes y evaluaciones."""
+"""Problemáticas: publicación, NDA, postulaciones, seguimiento, mensajes y evaluaciones."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import String, cast, or_, select
 from sqlalchemy.orm import Session
@@ -26,7 +26,7 @@ from app.services.matching import (
     discipline_coverage, score_capability_for_challenge, score_user_for_challenge,
 )
 
-router = APIRouter(tags=["Retos"])
+router = APIRouter(tags=["Problemáticas"])
 
 # Transiciones de estado permitidas para el dueño del reto
 TRANSITIONS = {
@@ -39,16 +39,16 @@ TRANSITIONS = {
 
 
 def _owned(db: Session, ch_id: int, user: User) -> Challenge:
-    ch = get_or_404(db, Challenge, ch_id, "Reto")
+    ch = get_or_404(db, Challenge, ch_id, "Problemática")
     if not is_challenge_owner(user, ch):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo la organización dueña del reto puede hacer esto")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo la organización dueña de la problemática puede hacer esto")
     return ch
 
 
 def _participant(db: Session, ch_id: int, user: User) -> Challenge:
-    ch = get_or_404(db, Challenge, ch_id, "Reto")
+    ch = get_or_404(db, Challenge, ch_id, "Problemática")
     if not is_challenge_participant(db, user, ch):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo participantes del reto")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo participantes de la problemática")
     return ch
 
 
@@ -69,12 +69,12 @@ def list_challenges(
     modality: Modality | None = None,
     state: str | None = Query(None, description="Estado de la República"),
     organization_id: int | None = None,
-    mine: bool = Query(False, description="Solo retos de mi organización"),
+    mine: bool = Query(False, description="Solo problemáticas de mi organización"),
     pag: Pagination = Depends(),
     user: User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
-    """Tablero público de retos. Con sesión iniciada muestra el detalle de los que ya firmaste NDA."""
+    """Tablero público de problemáticas. Con sesión iniciada muestra el detalle de los que ya firmaste NDA."""
     stmt = select(Challenge).join(Organization)
     if mine:
         if not user or not user.organization_id:
@@ -123,9 +123,9 @@ def create_challenge(data: ChallengeCreate,
 
 @router.get("/challenges/{ch_id}", response_model=ChallengeOut)
 def get_challenge(ch_id: int, user: User | None = Depends(get_optional_user), db: Session = Depends(get_db)):
-    ch = get_or_404(db, Challenge, ch_id, "Reto")
+    ch = get_or_404(db, Challenge, ch_id, "Problemática")
     if ch.status == ChallengeStatus.BORRADOR and not (user and is_challenge_owner(user, ch)):
-        raise HTTPException(404, "Reto no encontrado")
+        raise HTTPException(404, "Problemática no encontrada")
     return challenge_out(db, ch, user)
 
 
@@ -134,7 +134,7 @@ def update_challenge(ch_id: int, data: ChallengeUpdate,
                      user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ch = _owned(db, ch_id, user)
     if ch.status not in (ChallengeStatus.BORRADOR, ChallengeStatus.ABIERTO):
-        raise HTTPException(409, "No se puede editar un reto en progreso o cerrado")
+        raise HTTPException(409, "No se puede editar una problemática en progreso o cerrada")
     changes = data.model_dump(exclude_unset=True)
     if "modalities" in changes and changes["modalities"] is not None:
         changes["modalities"] = [m.value if hasattr(m, "value") else m for m in changes["modalities"]]
@@ -154,7 +154,7 @@ def change_status(ch_id: int, data: ChallengeStatusIn,
     team_id = accepted_team_id(db, ch)
     if team_id and data.status in (ChallengeStatus.FINALIZADO, ChallengeStatus.CANCELADO):
         for uid in _team_user_ids(db, team_id):
-            notify(db, uid, f"El reto '{ch.title}' cambió a {data.status.value}",
+            notify(db, uid, f"La problemática '{ch.title}' cambió a {data.status.value}",
                    "Ya puedes evaluar a tus contrapartes." if data.status == ChallengeStatus.FINALIZADO else None,
                    f"/retos/{ch.id}")
     db.commit()
@@ -164,9 +164,9 @@ def change_status(ch_id: int, data: ChallengeStatusIn,
 @router.post("/challenges/{ch_id}/nda", response_model=ChallengeOut)
 def accept_nda(ch_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Acepta el acuerdo de confidencialidad y desbloquea la descripción completa."""
-    ch = get_or_404(db, Challenge, ch_id, "Reto")
+    ch = get_or_404(db, Challenge, ch_id, "Problemática")
     if ch.status == ChallengeStatus.BORRADOR and not is_challenge_owner(user, ch):
-        raise HTTPException(404, "Reto no encontrado")
+        raise HTTPException(404, "Problemática no encontrada")
     if not has_nda(db, user, ch):
         db.add(NdaAcceptance(user_id=user.id, challenge_id=ch.id))
         db.commit()
@@ -186,7 +186,7 @@ def _proposal_out(db: Session, p: Proposal) -> ProposalOut:
 @router.get("/challenges/{ch_id}/proposals", response_model=list[ProposalOut])
 def list_proposals(ch_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """La empresa ve todas; un estudiante solo las de sus equipos."""
-    ch = get_or_404(db, Challenge, ch_id, "Reto")
+    ch = get_or_404(db, Challenge, ch_id, "Problemática")
     stmt = select(Proposal).where(Proposal.challenge_id == ch.id)
     if not is_challenge_owner(user, ch):
         my_teams = select(TeamMember.team_id).where(TeamMember.user_id == user.id)
@@ -198,9 +198,9 @@ def list_proposals(ch_id: int, user: User = Depends(get_current_user), db: Sessi
 def submit_proposal(ch_id: int, data: ProposalCreate,
                     user: User = Depends(require_roles(Role.ESTUDIANTE, Role.ACADEMICO)),
                     db: Session = Depends(get_db)):
-    ch = get_or_404(db, Challenge, ch_id, "Reto")
+    ch = get_or_404(db, Challenge, ch_id, "Problemática")
     if ch.status != ChallengeStatus.ABIERTO:
-        raise HTTPException(409, "El reto no está abierto a postulaciones")
+        raise HTTPException(409, "La problemática no está abierta a postulaciones")
     if not has_nda(db, user, ch):
         raise HTTPException(403, "Debes aceptar el acuerdo de confidencialidad antes de postularte")
 
@@ -213,11 +213,11 @@ def submit_proposal(ch_id: int, data: ProposalCreate,
     careers = {m.user.career.strip().lower() for m in team.members
                if m.role != TeamRole.ASESOR and m.user.career}
     if len(careers) < ch.min_disciplines:
-        raise HTTPException(422, f"El reto pide un equipo de al menos {ch.min_disciplines} carreras distintas; "
+        raise HTTPException(422, f"La problemática pide un equipo de al menos {ch.min_disciplines} carreras distintas; "
                                  f"tu equipo tiene {len(careers)}")
 
     if db.scalar(select(Proposal.id).where(Proposal.team_id == team.id, Proposal.challenge_id == ch.id)):
-        raise HTTPException(409, "Este equipo ya se postuló a este reto")
+        raise HTTPException(409, "Este equipo ya se postuló a esta problemática")
 
     # Todos los integrantes quedan cubiertos por el NDA del reto
     for m in team.members:
@@ -250,12 +250,12 @@ def decide_proposal(proposal_id: int, data: ProposalDecision,
         return _proposal_out(db, p)
 
     if not is_challenge_owner(user, ch):
-        raise HTTPException(403, "Solo la organización dueña del reto decide")
+        raise HTTPException(403, "Solo la organización dueña de la problemática decide")
     if data.status not in (ProposalStatus.ACEPTADA, ProposalStatus.RECHAZADA):
         raise HTTPException(422, "Estado inválido")
 
     if data.status == ProposalStatus.ACEPTADA and ch.status != ChallengeStatus.ABIERTO:
-        raise HTTPException(409, "El reto ya no está abierto")
+        raise HTTPException(409, "La problemática ya no está abierta")
 
     p.status, p.feedback = data.status, data.feedback
     if data.status == ProposalStatus.ACEPTADA:
@@ -286,7 +286,7 @@ def my_proposals(user: User = Depends(get_current_user), db: Session = Depends(g
 @router.get("/proposals/received", response_model=list[ProposalOut])
 def received_proposals(user: User = Depends(require_roles(Role.EMPRESA, Role.GOBIERNO)),
                        db: Session = Depends(get_db)):
-    """Postulaciones recibidas en todos los retos de la organización del usuario."""
+    """Postulaciones recibidas en todas las problemáticas de la organización del usuario."""
     stmt = select(Proposal).join(Challenge, Proposal.challenge_id == Challenge.id)
     if user.role != Role.ADMIN:
         if not user.organization_id:
@@ -311,7 +311,7 @@ def list_participants(ch_id: int, user: User = Depends(get_current_user), db: Se
 @router.get("/challenges/{ch_id}/matches/capabilities", response_model=list[CapabilityMatch])
 def match_capabilities(ch_id: int, limit: int = Query(10, le=50),
                        user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Laboratorios, equipo y expertos universitarios afines al reto."""
+    """Laboratorios, equipo y expertos universitarios afines a la problemática."""
     ch = _owned(db, ch_id, user)
     results = []
     for cap in db.scalars(select(Capability)):
@@ -326,7 +326,7 @@ def match_capabilities(ch_id: int, limit: int = Query(10, le=50),
 @router.get("/challenges/{ch_id}/matches/talent", response_model=list[UserMatch])
 def match_talent(ch_id: int, role: Role = Query(Role.ESTUDIANTE), limit: int = Query(20, le=100),
                  user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Estudiantes o académicos cuyo perfil encaja con el reto."""
+    """Estudiantes o académicos cuyo perfil encaja con la problemática."""
     ch = _owned(db, ch_id, user)
     if role not in (Role.ESTUDIANTE, Role.ACADEMICO):
         raise HTTPException(422, "role debe ser estudiante o academico")
@@ -349,7 +349,7 @@ def create_milestone(ch_id: int, data: MilestoneCreate,
                      user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ch = _participant(db, ch_id, user)
     if ch.status != ChallengeStatus.EN_PROGRESO:
-        raise HTTPException(409, "Los hitos se definen cuando el reto está en progreso")
+        raise HTTPException(409, "Los hitos se definen cuando la problemática está en progreso")
     m = Milestone(challenge_id=ch.id, **data.model_dump())
     db.add(m)
     db.commit()
@@ -365,7 +365,7 @@ def deliver_milestone(m_id: int, data: MilestoneDeliver,
         raise HTTPException(403, "Solo el equipo asignado entrega")
     m.deliverable_url, m.status = data.deliverable_url, MilestoneStatus.ENTREGADO
     for uid in _org_user_ids(db, ch.organization_id):
-        notify(db, uid, f"Entrega: {m.title}", f"Reto '{ch.title}'", f"/retos/{ch.id}/hitos")
+        notify(db, uid, f"Entrega: {m.title}", f"Problemática '{ch.title}'", f"/retos/{ch.id}/hitos")
     db.commit()
     return m
 
@@ -416,10 +416,10 @@ def create_review(ch_id: int, data: ReviewCreate,
     """Evaluación mutua al finalizar: alimenta la reputación y el portafolio."""
     ch = _participant(db, ch_id, user)
     if ch.status != ChallengeStatus.FINALIZADO:
-        raise HTTPException(409, "Solo se evalúa cuando el reto está finalizado")
+        raise HTTPException(409, "Solo se evalúa cuando la problemática está finalizada")
     reviewee = get_or_404(db, User, data.reviewee_id, "Usuario")
     if reviewee.id == user.id or not is_challenge_participant(db, reviewee, ch):
-        raise HTTPException(422, "Solo puedes evaluar a otro participante del reto")
+        raise HTTPException(422, "Solo puedes evaluar a otro participante de la problemática")
     if db.scalar(select(Review.id).where(Review.challenge_id == ch.id, Review.reviewer_id == user.id,
                                          Review.reviewee_id == reviewee.id)):
         raise HTTPException(409, "Ya evaluaste a este participante")
@@ -441,5 +441,5 @@ def delete_challenge(ch_id: int, user: User = Depends(get_current_user), db: Ses
         db.delete(nda)
     db.delete(ch)
     db.commit()
-    return MessageOut(detail="Reto eliminado")
+    return MessageOut(detail="Problemática eliminada")
 

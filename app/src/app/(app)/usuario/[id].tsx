@@ -40,13 +40,13 @@ export default function Usuario() {
         )}
       </Card>
 
-      <Section title="Evaluaciones en retos reales">
+      <Section title="Evaluaciones en problemáticas reales">
         {reviews.isLoading ? <Loading /> : !reviews.data?.length ? <Empty text="Aún no hay evaluaciones." icon="star-outline" /> :
           reviews.data.map((r) => (
             <Card key={r.id}>
               <Row style={{ justifyContent: 'space-between' }}>
                 <Stars value={r.score} size={16} />
-                <Muted>Reto #{r.challenge_id} · {shortDate(r.created_at)}</Muted>
+                <Muted>Problemática #{r.challenge_id} · {shortDate(r.created_at)}</Muted>
               </Row>
               {r.comment && <Body style={{ marginTop: 6 }}>“{r.comment}”</Body>}
             </Card>

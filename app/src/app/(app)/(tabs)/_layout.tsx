@@ -54,7 +54,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarIcon: icon('home-outline') }} />
-      <Tabs.Screen name="retos" options={{ title: 'Retos', tabBarIcon: icon('bulb-outline') }} />
+      <Tabs.Screen name="retos" options={{ title: 'Problemáticas', tabBarIcon: icon('bulb-outline') }} />
       <Tabs.Screen
         name="equipos"
         options={{ title: 'Equipos', tabBarIcon: icon('people-outline'), href: academic ? undefined : null }}

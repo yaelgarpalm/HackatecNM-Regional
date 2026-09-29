@@ -17,7 +17,7 @@ export default function Equipos() {
 
   return (
     <Screen onRefresh={q.refetch} refreshing={q.isRefetching}>
-      <Muted>Los retos piden equipos con varias carreras. Invita a compañeros de otras ingenierías o licenciaturas y a un asesor.</Muted>
+      <Muted>Las problemáticas piden equipos con varias carreras. Invita a compañeros de otras ingenierías o licenciaturas y a un asesor.</Muted>
 
       <Section title="Mis equipos">
         {q.isLoading ? <Loading /> : q.error ? <ErrorView error={q.error} onRetry={q.refetch} /> :

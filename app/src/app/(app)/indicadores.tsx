@@ -46,14 +46,14 @@ export default function Indicadores() {
       {q.isLoading ? <Loading /> : q.error || !s ? <ErrorView error={q.error} /> : (
         <>
           <Row gap={10} style={{ marginTop: 12 }}>
-            <Stat value={Object.values(s.retos).reduce((a, b) => a + b, 0)} text="Retos" icon="bulb-outline" />
+            <Stat value={Object.values(s.retos).reduce((a, b) => a + b, 0)} text="Problemáticas" icon="bulb-outline" />
             <Stat value={s.postulaciones} text="Postulaciones" icon="paper-plane-outline" />
             <Stat value={s.equipos} text="Equipos" icon="people-outline" />
             <Stat value={s.capacidades_publicadas} text="Capacidades" icon="flask-outline" />
             <Stat value={s.hitos_aprobados} text="Hitos aprobados" icon="flag-outline" />
             <Stat value={s.calificacion_promedio ? s.calificacion_promedio.toFixed(1) : '—'} text="Calificación promedio" icon="star-outline" />
           </Row>
-          <Section title="Retos por estado"><Bars data={s.retos} /></Section>
+          <Section title="Problemáticas por estado"><Bars data={s.retos} /></Section>
           <Section title="Organizaciones por tipo"><Bars data={s.organizaciones} /></Section>
           <Section title="Usuarios por rol"><Bars data={s.usuarios} /></Section>
         </>

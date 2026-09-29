@@ -8,12 +8,12 @@ export const LABELS: Record<string, string> = {
   academico: 'Académico',
   gobierno: 'Gobierno',
   admin: 'Administrador',
-  // estados de reto
+  // estados de problemática
   borrador: 'Borrador',
-  abierto: 'Abierto',
+  abierto: 'Abierta',
   en_progreso: 'En progreso',
-  finalizado: 'Finalizado',
-  cancelado: 'Cancelado',
+  finalizado: 'Finalizada',
+  cancelado: 'Cancelada',
   // postulación
   enviada: 'Enviada',
   aceptada: 'Aceptada',

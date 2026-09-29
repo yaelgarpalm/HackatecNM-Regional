@@ -17,11 +17,11 @@ export default function Sugerencias() {
     <Screen>
       <Stack.Screen options={{ title: 'Sugerencias' }} />
       <H2>{ch.data?.title}</H2>
-      <Muted>Coincidencias calculadas con las etiquetas y disciplinas del reto. Cada una explica por qué se sugiere.</Muted>
+      <Muted>Coincidencias calculadas con las etiquetas y disciplinas de la problemática. Cada una explica por qué se sugiere.</Muted>
 
       <Section title="Laboratorios, equipo y expertos">
         {caps.isLoading ? <Loading /> : caps.error ? <ErrorView error={caps.error} /> :
-          !caps.data?.length ? <Empty text="Sin coincidencias. Prueba agregar más etiquetas al reto." icon="flask-outline" /> :
+          !caps.data?.length ? <Empty text="Sin coincidencias. Prueba agregar más etiquetas a la problemática." icon="flask-outline" /> :
           caps.data.map((m) => (
             <Card key={m.capability.id}>
               <Row style={{ justifyContent: 'space-between' }}>
