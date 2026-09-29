@@ -27,7 +27,7 @@ uvicorn app.main:app --reload --host 0.0.0.0
 
 - Swagger: http://localhost:8000/docs (botón **Authorize** → usuario `ana@tessfp.edu.mx` / `Demo12345`)
 - Pruebas: `pytest -q`
-- Con PostgreSQL: `docker compose up --build`, o cambia `DATABASE_URL` en `.env` a `postgresql+psycopg://usuario:clave@localhost:5432/vinculatec`
+- Con PostgreSQL: instálalo localmente y cambia `DATABASE_URL` en `.env` a `postgresql+psycopg://usuario:clave@localhost:5432/vinculatec`
 
 > Para probar desde el celular en la misma red Wi-Fi, usa `--host 0.0.0.0` y apunta la app a `http://<IP-de-tu-PC>:8000`. En el emulador de Android, `localhost` es `10.0.2.2`.
 
