@@ -246,3 +246,18 @@ def test_problematica_solo_visible_para_carreras_requeridas(client):
 
     # El catálogo ofrece las carreras para elegirlas en la app
     assert "Licenciatura en Pedagogía" in c.get(f"{API}/catalogs").json()["carreras"]
+
+
+def test_registro_de_empresa(client):
+    c = client
+    nueva = {"name": "Tortillería Doña Mari", "type": "empresa", "state": "Estado de México"}
+    u = register(c, email="mari@tortilleria.mx", full_name="María López", role="empresa", organization=nueva)
+    assert u["organization_id"]
+    # Mismo nombre (aunque cambien acentos o mayúsculas): se avisa en vez de duplicarla
+    r = c.post(f"{API}/auth/register", json={"email": "otra@x.mx", "password": "Secreta123", "full_name": "Otra",
+                                             "role": "empresa", "organization": {**nueva, "name": "tortilleria doña mari"}})
+    assert r.status_code == 409 and "Ya existe" in r.json()["detail"]
+    # Nadie puede darse de alta como responsable de una empresa ajena
+    r = c.post(f"{API}/auth/register", json={"email": "intruso@x.mx", "password": "Secreta123", "full_name": "Intruso",
+                                             "role": "empresa", "organization_id": u["organization_id"]})
+    assert r.status_code == 422

@@ -62,12 +62,13 @@ export default function Registro() {
 
   const orgType = role ? ORG_FOR_ROLE[role] : null;
   const word = orgType ? ORG_WORD[orgType] : null;
-  const { data: orgs } = useApi<Page<Organization>>(orgType ? '/organizations' : null, { type: orgType, size: 100 });
-  const existing = (orgs?.items ?? []).find((o) => fold(o.name) === fold(org.name));
-  const isNewOrg = !!org.name.trim() && !existing;
   const academic = role === 'estudiante' || role === 'academico';
-  // Empresa, gobierno y universidad dan de alta su organización; estudiantes y académicos solo eligen su institución
+  // Empresa, gobierno y universidad registran SU organización (campo de texto, sin lista de otras);
+  // estudiantes y académicos eligen de la lista la institución donde estudian o trabajan
   const registersOrg = role === 'empresa' || role === 'gobierno' || role === 'universidad';
+  const { data: orgs } = useApi<Page<Organization>>(academic ? '/organizations' : null, { type: 'universidad', size: 100 });
+  const existing = academic ? (orgs?.items ?? []).find((o) => fold(o.name) === fold(org.name)) : undefined;
+  const isNewOrg = !!org.name.trim() && !existing;
   const set = (k: keyof typeof f) => (v: string) => setF({ ...f, [k]: v });
   const setO = (k: keyof typeof org) => (v: string | null) => setOrg({ ...org, [k]: v });
 
@@ -96,7 +97,7 @@ export default function Registro() {
         email: f.email.trim(), password: f.password, full_name: f.full_name.trim(), role,
         career: f.career || null, semester: f.semester ? Number(f.semester) : null, skills: splitList(f.skills),
       };
-      if (existing) body.organization_id = existing.id;
+      if (existing && !registersOrg) body.organization_id = existing.id;
       else if (word) body.organization = { ...org, name: org.name.trim(), type: orgType, size: org.size || null };
       await api.post('/auth/register', body);
       await login(body.email, f.password);
@@ -112,18 +113,26 @@ export default function Registro() {
     <Screen>
       <Card>
         <ChipSelect label="¿Quién eres?" options={(cat?.roles ?? Object.keys(ROLE_HELP)) as Role[]} value={role}
-          onChange={(r) => { setRole(r); setOrg({ ...org, name: '' }); setError(null); }} />
+          onChange={(r) => { if (r) { setRole(r); setOrg({ ...org, name: '' }); setError(null); } }} />
         {role && <Muted>{ROLE_HELP[role]}</Muted>}
 
         {/* ---------- 1. Organización ---------- */}
         {word && (
           <>
-            <Step n={++step} title={`Datos de tu ${word.noun}`}
-              text={registersOrg
-                ? `Si tu ${word.noun} ya está en VinculaTec, elígela de la lista; si no, escribe su nombre y se registrará.`
-                : `Elige la ${word.noun} donde estudias o trabajas. Si no aparece, escribe su nombre.`} />
-            <Combobox label={`Nombre de la ${word.noun}`} value={org.name} onChange={setO('name')} allowCustom
-              options={(orgs?.items ?? []).map((o) => o.name)} placeholder={`Ej. ${word.example}`} />
+            {registersOrg ? (
+              <>
+                <Step n={++step} title={`Datos de tu ${word.noun}`} text={`Registra tu ${word.noun} en VinculaTec.`} />
+                <Field label={`Nombre de tu ${word.noun}`} value={org.name} onChangeText={setO('name')}
+                  placeholder={`Ej. ${word.example}`} />
+              </>
+            ) : (
+              <>
+                <Step n={++step} title={`¿Dónde ${role === 'estudiante' ? 'estudias' : 'trabajas'}?`}
+                  text="Busca tu institución en la lista. Si no aparece, escribe su nombre completo." />
+                <Combobox label="Tu institución" value={org.name} onChange={setO('name')} allowCustom
+                  options={(orgs?.items ?? []).map((o) => o.name)} placeholder={`Ej. ${word.example}`} />
+              </>
+            )}
 
             {existing && (
               <Card style={{ backgroundColor: colors.successSoft, borderColor: colors.success }}>
@@ -133,9 +142,11 @@ export default function Registro() {
             )}
             {isNewOrg && (
               <>
-                <Muted style={{ marginBottom: 10 }}>
-                  “{org.name.trim()}” no está registrada: se creará como {word.noun} nueva. Completa sus datos:
-                </Muted>
+                {!registersOrg && (
+                  <Muted style={{ marginBottom: 10 }}>
+                    “{org.name.trim()}” todavía no está en VinculaTec: se registrará como institución nueva.
+                  </Muted>
+                )}
                 {orgType === 'empresa' && (
                   <ChipSelect label="Tamaño de la empresa (opcional)" options={cat?.tamanos_organizacion ?? []} value={org.size}
                     onChange={setO('size')} />

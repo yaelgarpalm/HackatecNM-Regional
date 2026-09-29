@@ -11,6 +11,7 @@ from app.deps import get_current_user
 from app.models import Organization, User
 from app.models.enums import OrgType, Role
 from app.schemas import LoginIn, RefreshIn, Token, UserCreate, UserOut
+from app.services.matching import normalize
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -22,6 +23,8 @@ ROLE_ORG = {
     Role.ESTUDIANTE: OrgType.UNIVERSIDAD,
     Role.ACADEMICO: OrgType.UNIVERSIDAD,
 }
+
+ORG_OWNER_ROLES = (Role.EMPRESA, Role.GOBIERNO, Role.UNIVERSIDAD)
 
 
 def _tokens(user: User) -> Token:
@@ -36,11 +39,21 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status.HTTP_409_CONFLICT, "El correo ya está registrado")
 
     org_id = data.organization_id
+    # Quien da de alta una empresa, dependencia o universidad crea la suya: no puede unirse
+    # a una organización ajena (quedaría como su responsable sin serlo)
+    if data.role in ORG_OWNER_ROLES and org_id is not None:
+        raise HTTPException(422, "Escribe el nombre de tu organización para registrarla")
     if data.organization:
         if data.organization.type != ROLE_ORG[data.role]:
             raise HTTPException(422, f"Un usuario '{data.role.value}' debe pertenecer a una organización "
                                      f"de tipo '{ROLE_ORG[data.role].value}'")
-        org = Organization(**data.organization.model_dump())
+        name = data.organization.name.strip()
+        same_type = db.scalars(select(Organization.name).where(Organization.type == data.organization.type))
+        if any(normalize(n) == normalize(name) for n in same_type):
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                f"Ya existe una organización registrada como '{name}'. Si es la tuya, pide a su "
+                                "responsable que te dé acceso; si es otra, agrega algo que la distinga (p. ej. la ciudad).")
+        org = Organization(**{**data.organization.model_dump(), "name": name})
         db.add(org)
         db.flush()
         org_id = org.id
@@ -51,7 +64,7 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
         if org.type != ROLE_ORG[data.role]:
             raise HTTPException(422, "El tipo de organización no corresponde con el rol")
 
-    if data.role in (Role.EMPRESA, Role.GOBIERNO, Role.UNIVERSIDAD) and org_id is None:
+    if data.role in ORG_OWNER_ROLES and org_id is None:
         raise HTTPException(422, "Escribe el nombre de tu empresa, dependencia o institución para crear la cuenta")
 
     user = User(
