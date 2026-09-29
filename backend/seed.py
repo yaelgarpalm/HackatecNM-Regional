@@ -80,7 +80,7 @@ def run() -> None:
                   summary="Perdemos producto porque la temperatura de los hornos varía sin control.",
                   description="Tenemos 3 hornos de gas; hoy registramos la temperatura a mano cada hora.",
                   category="IoT", tags=["IoT", "sensores", "temperatura", "inventarios"],
-                  required_disciplines=["Sistemas Computacionales", "Industrial"], min_disciplines=2,
+                  required_disciplines=["Ingeniería en Sistemas Computacionales", "Ingeniería Industrial"], min_disciplines=2,
                   modalities=["residencia", "proyecto_clase"], offers_stipend=True, budget_mxn=15000,
                   duration_weeks=12, deadline=date.today() + timedelta(days=30),
                   confidentiality=Confidentiality.CONFIDENCIAL, ip_model=IPModel.COMPARTIDA),
@@ -89,7 +89,8 @@ def run() -> None:
                   summary="Queremos vender nuestros textiles fuera de la región con pago en línea.",
                   description="Somos 25 artesanas; necesitamos catálogo, pagos y envíos sencillos de administrar.",
                   category="Comercio electrónico", tags=["comercio electrónico", "web", "diseño", "marketing digital"],
-                  required_disciplines=["Sistemas Computacionales", "Diseño Gráfico", "Gestión Empresarial"],
+                  required_disciplines=["Ingeniería en Sistemas Computacionales", "Licenciatura en Diseño Gráfico",
+                                        "Ingeniería en Gestión Empresarial"],
                   min_disciplines=2, modalities=["servicio_social", "residencia"], duration_weeks=16,
                   ip_model=IPModel.EMPRESA),
         Challenge(organization_id=municipio.id, created_by_id=muni.id, status=ChallengeStatus.ABIERTO,
@@ -97,7 +98,7 @@ def run() -> None:
                   summary="App para que la ciudadanía reporte fugas con foto y ubicación.",
                   description="Hoy los reportes llegan por teléfono y se pierden; queremos un mapa de atención.",
                   category="Gobierno digital", tags=["móvil", "web", "mapas", "bases de datos"],
-                  required_disciplines=["Sistemas Computacionales", "Civil"], min_disciplines=1,
+                  required_disciplines=["Ingeniería en Sistemas Computacionales", "Ingeniería Civil"], min_disciplines=1,
                   modalities=["servicio_social", "tesis"], ip_model=IPModel.ABIERTA),
     ])
     db.commit()

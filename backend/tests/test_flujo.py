@@ -245,4 +245,4 @@ def test_problematica_solo_visible_para_carreras_requeridas(client):
     assert "Licenciatura en Pedagogía" not in talent
 
     # El catálogo ofrece las carreras para elegirlas en la app
-    assert "Pedagogía" in c.get(f"{API}/catalogs").json()["carreras"]
+    assert "Licenciatura en Pedagogía" in c.get(f"{API}/catalogs").json()["carreras"]

@@ -4,6 +4,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.services.careers import canonical_career
 from app.models.enums import (
     CapabilityType, ChallengeStatus, Confidentiality, IPModel, MilestoneStatus,
     Modality, OrgSize, OrgType, ProposalStatus, Role, TeamRole,
@@ -39,6 +40,17 @@ def _clean_list(v: list[str] | None) -> list[str]:
             seen.add(s.lower())
             out.append(s)
     return out
+
+
+def _official_career(v: str | None) -> str | None:
+    """Guarda el nombre oficial del catálogo ('contador' -> 'Licenciatura en Contaduría')."""
+    if v is None or not v.strip():
+        return None
+    return canonical_career(v) or v.strip()
+
+
+def _official_careers(v: list[str] | None) -> list[str] | None:
+    return None if v is None else _clean_list([_official_career(i) or "" for i in v])
 
 
 # ---------------------------------------------------------------- Auth
@@ -106,6 +118,11 @@ class UserBase(BaseModel):
     def clean_skills(cls, v):
         return _clean_list(v)
 
+    @field_validator("career")
+    @classmethod
+    def official_career(cls, v):
+        return _official_career(v)
+
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
@@ -128,6 +145,11 @@ class UserUpdate(BaseModel):
     skills: list[str] | None = None
     bio: str | None = None
     portfolio_url: str | None = None
+
+    @field_validator("career")
+    @classmethod
+    def official_career(cls, v):
+        return _official_career(v)
 
 
 class UserPublic(ORM):
@@ -191,10 +213,15 @@ class ChallengeBase(BaseModel):
     confidentiality: Confidentiality = Confidentiality.PUBLICO
     ip_model: IPModel = IPModel.COMPARTIDA
 
-    @field_validator("tags", "required_disciplines")
+    @field_validator("tags")
     @classmethod
     def clean_lists(cls, v):
         return _clean_list(v)
+
+    @field_validator("required_disciplines")
+    @classmethod
+    def official_careers(cls, v):
+        return _official_careers(v)
 
 
 class ChallengeCreate(ChallengeBase):
@@ -216,6 +243,11 @@ class ChallengeUpdate(BaseModel):
     deadline: date | None = None
     confidentiality: Confidentiality | None = None
     ip_model: IPModel | None = None
+
+    @field_validator("required_disciplines")
+    @classmethod
+    def official_careers(cls, v):
+        return _official_careers(v)
 
 
 class ChallengeStatusIn(BaseModel):

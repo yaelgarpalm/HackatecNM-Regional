@@ -41,7 +41,7 @@ export default function Login() {
         <View style={s.brand}>
           <Ionicons name="git-network-outline" size={44} color="#fff" />
           <Text style={s.logo}>VinculaTec</Text>
-          <Text style={s.tagline}>Problemáticas reales de empresas, resueltos por equipos universitarios</Text>
+          <Text style={s.tagline}>Problemáticas reales de empresas, resueltas por equipos universitarios</Text>
         </View>
 
         <Card style={{ padding: 20 }}>
