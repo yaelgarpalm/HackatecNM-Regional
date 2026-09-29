@@ -52,7 +52,7 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
             raise HTTPException(422, "El tipo de organización no corresponde con el rol")
 
     if data.role in (Role.EMPRESA, Role.GOBIERNO, Role.UNIVERSIDAD) and org_id is None:
-        raise HTTPException(422, "Este rol requiere indicar o registrar una organización")
+        raise HTTPException(422, "Escribe el nombre de tu empresa, dependencia o institución para crear la cuenta")
 
     user = User(
         email=email,
