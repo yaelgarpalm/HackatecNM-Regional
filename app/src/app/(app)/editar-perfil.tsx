@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 
+import { CareerPicker } from '@/components/CareerPicker';
 import { useAction } from '@/components/hooks';
 import { Button, Card, Field, Screen } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -28,7 +29,7 @@ export default function EditarPerfil() {
         <Field label="Nombre completo" value={f.full_name} onChangeText={set('full_name')} />
         {isAcademic(user) && (
           <>
-            <Field label="Carrera" value={f.career} onChangeText={set('career')} />
+            <CareerPicker value={f.career} onChange={set('career')} />
             {user.role === 'estudiante' && <Field label="Semestre" value={f.semester} onChangeText={set('semester')} keyboardType="number-pad" />}
             <Field label="Habilidades" value={f.skills} onChangeText={set('skills')} hint="Separadas por comas" />
             <Field label="Portafolio (GitHub, Behance, sitio…)" value={f.portfolio_url} onChangeText={set('portfolio_url')} autoCapitalize="none" />

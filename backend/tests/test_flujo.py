@@ -201,3 +201,48 @@ def test_refresh_y_seguridad(client):
                       headers={"Authorization": f"Bearer {r['refresh_token']}"}).status_code == 401
     assert client.post(f"{API}/auth/login", json={"email": "ana@tessfp.edu.mx",
                                                   "password": "mala"}).status_code == 401
+
+
+def test_problematica_solo_visible_para_carreras_requeridas(client):
+    c = client
+    register(c, email="rh@agroempresa.mx", full_name="Recursos Humanos", role="empresa",
+             organization={"name": "AgroEmpresa", "type": "empresa", "state": "Estado de México"})
+    uni_id = register(c, email="vinc@tecnm.mx", full_name="Vinculación", role="universidad",
+                      organization={"name": "TecNM Campus", "type": "universidad"})["organization_id"]
+    alumnos = {
+        "info@tecnm.mx": "Ingeniería Informática",
+        "agro@tecnm.mx": "Ing. en Agronomía",
+        "conta@tecnm.mx": "Contador Público",
+        "peda@tecnm.mx": "Licenciatura en Pedagogía",
+    }
+    for email, carrera in alumnos.items():
+        register(c, email=email, full_name=carrera, role="estudiante", organization_id=uni_id, career=carrera)
+
+    h_emp = login(c, "rh@agroempresa.mx")
+    ch = c.post(f"{API}/challenges", headers=h_emp, json={
+        "title": "Control de costos de cosecha", "summary": "Necesitamos controlar los costos de cada cosecha.",
+        "description": "Registramos a mano insumos, jornales y rendimiento de cada parcela.",
+        "category": "Agro", "required_disciplines": ["Informático", "Agrónomo", "Contador"], "min_disciplines": 1,
+        "publish": True}).json()
+
+    def ids(h):
+        return [x["id"] for x in c.get(f"{API}/challenges", headers=h).json()["items"]]
+
+    for email in ["info@tecnm.mx", "agro@tecnm.mx", "conta@tecnm.mx"]:
+        h = login(c, email)
+        assert ch["id"] in ids(h), email
+        assert c.get(f"{API}/challenges/{ch['id']}", headers=h).status_code == 200
+
+    h_peda = login(c, "peda@tecnm.mx")
+    assert ch["id"] not in ids(h_peda)
+    r = c.get(f"{API}/challenges/{ch['id']}", headers=h_peda)
+    assert r.status_code == 403 and "Pedagogía" in r.json()["detail"]
+    recs = c.get(f"{API}/recommendations/challenges", headers=h_peda).json()
+    assert ch["id"] not in [m["challenge"]["id"] for m in recs]
+
+    # La empresa solo recibe sugerencias de talento de las carreras que pidió
+    talent = {m["user"]["career"] for m in c.get(f"{API}/challenges/{ch['id']}/matches/talent", headers=h_emp).json()}
+    assert "Licenciatura en Pedagogía" not in talent
+
+    # El catálogo ofrece las carreras para elegirlas en la app
+    assert "Pedagogía" in c.get(f"{API}/catalogs").json()["carreras"]

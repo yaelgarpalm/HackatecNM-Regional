@@ -193,4 +193,5 @@ export interface Catalogs {
   roles_equipo: string[];
   estados_postulacion: string[];
   estados_hito: string[];
+  carreras: string[];
 }

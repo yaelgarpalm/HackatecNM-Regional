@@ -3,7 +3,8 @@ import { useState } from 'react';
 
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { useApi, useCatalogs } from '@/components/hooks';
-import { Button, ChipSelect, Empty, ErrorView, Field, Loading, Muted, Row, Screen } from '@/components/ui';
+import { colors } from '@/components/theme';
+import { Button, Card, ChipSelect, Empty, ErrorView, Field, Loading, Muted, Row, Screen } from '@/components/ui';
 import { isOrgPublisher, useUser } from '@/lib/auth';
 import type { Challenge, Page } from '@/lib/types';
 
@@ -33,6 +34,20 @@ export default function Retos() {
           <Button small title="Publicar problemática" icon="add" onPress={() => router.push('/publicar')} />
         )}
       </Row>
+
+      {user.role === 'estudiante' && (
+        <Card style={{ backgroundColor: colors.primarySoft }}>
+          {user.career ? (
+            <Muted>Ves las problemáticas que piden tu carrera ({user.career}) o que aceptan cualquier carrera.</Muted>
+          ) : (
+            <>
+              <Muted>Registra tu carrera para ver las problemáticas que buscan estudiantes como tú.</Muted>
+              <Button small variant="secondary" title="Completar perfil" onPress={() => router.push('/editar-perfil')}
+                style={{ alignSelf: 'flex-start', marginTop: 8 }} />
+            </>
+          )}
+        </Card>
+      )}
 
       <Field label="Buscar" value={q} onChangeText={setQ} placeholder="IoT, comercio electrónico, agua…"
         returnKeyType="search" onSubmitEditing={() => { setSearch(q); setPage(1); }} />

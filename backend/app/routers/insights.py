@@ -11,7 +11,8 @@ from app.models.enums import (
     OrgSize, OrgType, ProposalStatus, Role, TeamRole,
 )
 from app.schemas import ChallengeMatch
-from app.services.common import challenge_out
+from app.services.careers import CARRERAS
+from app.services.common import career_allows, challenge_out
 from app.services.matching import score_challenge_for_user
 
 router = APIRouter(tags=["Recomendaciones e indicadores"])
@@ -24,6 +25,8 @@ def recommended_challenges(limit: int = Query(10, le=50),
     """Problemáticas abiertas ordenadas por afinidad con la carrera y habilidades del usuario."""
     results = []
     for ch in db.scalars(select(Challenge).where(Challenge.status == ChallengeStatus.ABIERTO)):
+        if not career_allows(user, ch):
+            continue
         score, reasons = score_challenge_for_user(user, ch)
         if score > 0:
             results.append(ChallengeMatch(challenge=challenge_out(db, ch, user), score=score, reasons=reasons))
@@ -92,4 +95,5 @@ def catalogs():
         "roles_equipo": as_list(TeamRole),
         "estados_postulacion": as_list(ProposalStatus),
         "estados_hito": as_list(MilestoneStatus),
+        "carreras": list(CARRERAS),
     }

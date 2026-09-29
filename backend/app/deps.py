@@ -51,6 +51,18 @@ class Pagination:
         self.page = page
         self.size = size
 
+    def apply_list(self, items: list, mapper: Callable = lambda x: x) -> dict:
+        """Como apply(), para resultados que se filtran en Python antes de paginar."""
+        total = len(items)
+        page = items[(self.page - 1) * self.size: self.page * self.size]
+        return {
+            "items": [mapper(r) for r in page],
+            "total": total,
+            "page": self.page,
+            "size": self.size,
+            "pages": (total + self.size - 1) // self.size,
+        }
+
     def apply(self, db: Session, stmt, mapper: Callable = lambda x: x) -> dict:
         total = db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
         rows = db.scalars(stmt.offset((self.page - 1) * self.size).limit(self.size)).all()

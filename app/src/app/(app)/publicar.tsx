@@ -2,20 +2,21 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { useAction, useApi, useCatalogs } from '@/components/hooks';
+import { CareersPicker } from '@/components/CareerPicker';
 import { Button, Card, ChipSelect, Field, Loading, Muted, Row, Screen, Section, Switch } from '@/components/ui';
 import { api } from '@/lib/api';
 import { splitList } from '@/lib/format';
 import type { Challenge } from '@/lib/types';
 
 const EMPTY = {
-  title: '', summary: '', description: '', category: '', tags: '', required_disciplines: '',
+  title: '', summary: '', description: '', category: '', tags: '', required_disciplines: [] as string[],
   min_disciplines: '2', modalities: [] as string[], budget_mxn: '', offers_stipend: false,
   duration_weeks: '', deadline: '', confidentiality: 'publico', ip_model: 'compartida',
 };
 
 const fromChallenge = (c: Challenge): typeof EMPTY => ({
   title: c.title, summary: c.summary, description: c.description ?? '', category: c.category,
-  tags: c.tags.join(', '), required_disciplines: c.required_disciplines.join(', '),
+  tags: c.tags.join(', '), required_disciplines: c.required_disciplines,
   min_disciplines: String(c.min_disciplines), modalities: c.modalities, budget_mxn: c.budget_mxn ? String(c.budget_mxn) : '',
   offers_stipend: c.offers_stipend, duration_weeks: c.duration_weeks ? String(c.duration_weeks) : '',
   deadline: c.deadline ?? '', confidentiality: c.confidentiality, ip_model: c.ip_model,
@@ -37,7 +38,7 @@ function ChallengeForm({ id, initial }: { id?: string; initial: typeof EMPTY }) 
 
   const body = () => ({
     title: f.title, summary: f.summary, description: f.description, category: f.category,
-    tags: splitList(f.tags), required_disciplines: splitList(f.required_disciplines),
+    tags: splitList(f.tags), required_disciplines: f.required_disciplines,
     min_disciplines: Number(f.min_disciplines) || 1, modalities: f.modalities,
     budget_mxn: f.budget_mxn ? Number(f.budget_mxn) : null, offers_stipend: f.offers_stipend,
     duration_weeks: f.duration_weeks ? Number(f.duration_weeks) : null, deadline: f.deadline || null,
@@ -72,8 +73,7 @@ function ChallengeForm({ id, initial }: { id?: string; initial: typeof EMPTY }) 
 
       <Section title="Equipo buscado">
         <Card>
-          <Field label="Disciplinas requeridas" value={f.required_disciplines} onChangeText={set('required_disciplines')}
-            placeholder="Sistemas Computacionales, Industrial" hint="Separadas por comas." />
+          <CareersPicker value={f.required_disciplines} onChange={set('required_disciplines')} />
           <Field label="Mínimo de carreras distintas en el equipo" value={f.min_disciplines} onChangeText={set('min_disciplines')} keyboardType="number-pad" />
           <ChipSelect label="Válido como" options={cat?.modalidades ?? []} value={f.modalities} onChange={set('modalities')} multi />
         </Card>

@@ -19,9 +19,11 @@ from app.schemas import (
     ProposalOut, ReviewCreate, ReviewOut, UserMatch, UserPublic,
 )
 from app.services.common import (
-    accepted_team_id, challenge_out, get_or_404, has_nda, is_challenge_owner,
+    accepted_team_id, can_view_challenge, career_allows, career_denied_message, challenge_out, get_or_404, has_nda,
+    is_challenge_owner,
     is_challenge_participant, is_team_member, notify, recompute_rating, team_out,
 )
+from app.services.careers import career_matches
 from app.services.matching import (
     discipline_coverage, score_capability_for_challenge, score_user_for_challenge,
 )
@@ -100,6 +102,10 @@ def list_challenges(
         stmt = stmt.where(or_(Challenge.title.ilike(like), Challenge.summary.ilike(like),
                               cast(Challenge.tags, String).ilike(like)))
     stmt = stmt.order_by(Challenge.created_at.desc())
+    if user and user.role == Role.ESTUDIANTE and not mine:
+        # Solo las problemáticas que piden la carrera del estudiante
+        visibles = [ch for ch in db.scalars(stmt) if can_view_challenge(db, user, ch)]
+        return pag.apply_list(visibles, lambda ch: challenge_out(db, ch, user))
     return pag.apply(db, stmt, lambda ch: challenge_out(db, ch, user))
 
 
@@ -126,6 +132,8 @@ def get_challenge(ch_id: int, user: User | None = Depends(get_optional_user), db
     ch = get_or_404(db, Challenge, ch_id, "Problemática")
     if ch.status == ChallengeStatus.BORRADOR and not (user and is_challenge_owner(user, ch)):
         raise HTTPException(404, "Problemática no encontrada")
+    if not can_view_challenge(db, user, ch):
+        raise HTTPException(403, career_denied_message(user, ch))
     return challenge_out(db, ch, user)
 
 
@@ -212,6 +220,12 @@ def submit_proposal(ch_id: int, data: ProposalCreate,
     # Regla multidisciplinaria: número mínimo de carreras distintas en el equipo
     careers = {m.user.career.strip().lower() for m in team.members
                if m.role != TeamRole.ASESOR and m.user.career}
+    if ch.required_disciplines:
+        fuera = [m.user.full_name for m in team.members if m.role != TeamRole.ASESOR
+                 and not career_matches(m.user.career, ch.required_disciplines)]
+        if fuera:
+            raise HTTPException(422, f"La problemática solo acepta estudiantes de: {', '.join(ch.required_disciplines)}. "
+                                     f"No cumplen: {', '.join(fuera)}")
     if len(careers) < ch.min_disciplines:
         raise HTTPException(422, f"La problemática pide un equipo de al menos {ch.min_disciplines} carreras distintas; "
                                  f"tu equipo tiene {len(careers)}")
@@ -332,6 +346,8 @@ def match_talent(ch_id: int, role: Role = Query(Role.ESTUDIANTE), limit: int = Q
         raise HTTPException(422, "role debe ser estudiante o academico")
     results = []
     for u in db.scalars(select(User).where(User.role == role, User.is_active.is_(True))):
+        if not career_allows(u, ch):
+            continue
         score, reasons = score_user_for_challenge(u, ch)
         if score > 0:
             results.append(UserMatch(user=UserPublic.model_validate(u), score=score, reasons=reasons))

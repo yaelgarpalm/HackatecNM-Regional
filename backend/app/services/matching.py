@@ -8,6 +8,7 @@ import re
 import unicodedata
 
 from app.models import Capability, Challenge, User
+from app.services.careers import career_matches
 
 _STOP = {"de", "la", "el", "y", "en", "para", "con", "los", "las", "del", "a", "un", "una", "por", "e"}
 
@@ -27,18 +28,6 @@ def tokens(*texts: str | None) -> set[str]:
 
 def terms(items: list[str] | None) -> set[str]:
     return {normalize(i) for i in (items or []) if i}
-
-
-def _discipline_hit(career: str | None, disciplines: list[str]) -> str | None:
-    """Coincidencia flexible: 'Ing. en Sistemas Computacionales' ~ 'sistemas computacionales'."""
-    if not career:
-        return None
-    c = tokens(career)
-    for d in disciplines:
-        dt = tokens(d)
-        if dt and len(dt & c) >= max(1, len(dt) // 2):
-            return d
-    return None
 
 
 def _skill_overlap(user: User, ch: Challenge) -> tuple[float, set[str]]:
@@ -62,7 +51,7 @@ def score_challenge_for_user(user: User, ch: Challenge) -> tuple[float, list[str
     reasons: list[str] = []
     score = 0.0
 
-    hit = _discipline_hit(user.career, ch.required_disciplines)
+    hit = career_matches(user.career, ch.required_disciplines)
     if hit:
         score += 0.4
         reasons.append(f"Tu carrera coincide con la disciplina requerida: {hit}")
@@ -89,7 +78,7 @@ def score_user_for_challenge(user: User, ch: Challenge) -> tuple[float, list[str
     """Talento sugerido para un reto (vista de la empresa)."""
     reasons: list[str] = []
     score = 0.0
-    hit = _discipline_hit(user.career, ch.required_disciplines)
+    hit = career_matches(user.career, ch.required_disciplines)
     if hit:
         score += 0.4
         reasons.append(f"Carrera afín: {hit}")
@@ -119,5 +108,5 @@ def discipline_coverage(members: list[User], required: list[str]) -> float:
     """Porcentaje de disciplinas requeridas cubiertas por el equipo."""
     if not required:
         return 1.0
-    covered = {d for d in required for m in members if _discipline_hit(m.career, [d])}
+    covered = {d for d in required for m in members if career_matches(m.career, [d])}
     return round(len(covered) / len(required), 3)

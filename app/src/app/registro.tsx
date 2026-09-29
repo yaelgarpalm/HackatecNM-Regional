@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
+import { CareerPicker } from '@/components/CareerPicker';
 import { useApi, useCatalogs } from '@/components/hooks';
 import { colors } from '@/components/theme';
 import { Button, Card, ChipSelect, ErrorView, Field, H2, Muted, Row, Screen, Switch } from '@/components/ui';
@@ -66,7 +67,7 @@ export default function Registro() {
         <Field label="Contraseña" value={f.password} onChangeText={set('password')} secureTextEntry hint="Mínimo 8 caracteres" />
         {academic && (
           <>
-            <Field label="Carrera" value={f.career} onChangeText={set('career')} placeholder="Ingeniería en Sistemas Computacionales" />
+            <CareerPicker value={f.career} onChange={set('career')} />
             {role === 'estudiante' && (
               <Field label="Semestre" value={f.semester} onChangeText={set('semester')} keyboardType="number-pad" />
             )}
