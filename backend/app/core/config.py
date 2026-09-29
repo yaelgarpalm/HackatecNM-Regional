@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api/v1"
     DEBUG: bool = True
 
-    # SQLite en desarrollo; en producción usa PostgreSQL, p. ej.:
-    # DATABASE_URL=postgresql+psycopg://usuario:clave@localhost:5432/vinculatec
+    # SQLite en desarrollo; en la nube, Azure Database for PostgreSQL, p. ej.:
+    # DATABASE_URL=postgresql+psycopg://usuario:clave@mi-servidor.postgres.database.azure.com:5432/vinculatec?sslmode=require
     DATABASE_URL: str = "sqlite:///./vinculatec.db"
 
     # JWT

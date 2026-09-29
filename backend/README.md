@@ -27,7 +27,7 @@ uvicorn app.main:app --reload --host 0.0.0.0
 
 - Swagger: http://localhost:8000/docs (botón **Authorize** → usuario `ana@tessfp.edu.mx` / `Demo12345`)
 - Pruebas: `pytest -q`
-- Con PostgreSQL: instálalo localmente y cambia `DATABASE_URL` en `.env` a `postgresql+psycopg://usuario:clave@localhost:5432/vinculatec`
+- Base de datos en la nube (Azure Database for PostgreSQL): ver la sección **Base de datos en Azure** más abajo
 
 > Para probar desde el celular en la misma red Wi-Fi, usa `--host 0.0.0.0` y apunta la app a `http://<IP-de-tu-PC>:8000`. En el emulador de Android, `localhost` es `10.0.2.2`.
 
@@ -95,6 +95,24 @@ app/
 tests/test_flujo.py    # flujo completo de principio a fin
 seed.py                # datos de demostración
 ```
+
+## Base de datos en Azure
+
+Se usa **Azure Database for PostgreSQL – Flexible Server** (el código ya es compatible; en local sigue funcionando con SQLite).
+
+1. En el portal de Azure: **Crear un recurso → Azure Database for PostgreSQL → Servidor flexible**.
+   - Carga de trabajo: *Desarrollo* (el nivel más barato, Burstable B1ms).
+   - Autenticación: *Solo autenticación de PostgreSQL*; anota el usuario administrador y la contraseña.
+2. En **Redes**: acceso público y **Agregar la dirección IP del cliente actual** (tu PC). Si el backend se
+   publica también en Azure, activa *Permitir el acceso público desde cualquier servicio de Azure*.
+3. Cuando termine de crearse, en **Bases de datos → Agregar** crea la base `vinculatec`.
+4. En `backend/.env` (no se sube a GitHub) pon la conexión:
+   ```
+   DATABASE_URL=postgresql+psycopg://USUARIO:CLAVE@NOMBRE-SERVIDOR.postgres.database.azure.com:5432/vinculatec?sslmode=require
+   ```
+   Si la contraseña tiene `@ : / # ?`, codifícalos (`@` → `%40`, `#` → `%23`).
+5. Al arrancar `uvicorn` las tablas se crean solas. Para cargar los datos de demo (borra todo lo que haya):
+   `python seed.py --borrar-todo`
 
 ## Frontend
 

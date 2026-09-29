@@ -7,12 +7,22 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import settings
 
-connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+IS_SQLITE = settings.DATABASE_URL.startswith("sqlite")
+
+if IS_SQLITE:
+    connect_args: dict = {"check_same_thread": False}
+    pool_args: dict = {}
+else:
+    # Azure Database for PostgreSQL exige conexiones cifradas (SSL)
+    connect_args = {} if "sslmode=" in settings.DATABASE_URL else {"sslmode": "require"}
+    # Azure cierra conexiones inactivas: se reciclan antes de que caduquen
+    pool_args = {"pool_size": 5, "max_overflow": 5, "pool_recycle": 1800}
 
 engine = create_engine(
     settings.DATABASE_URL,
     connect_args=connect_args,
     pool_pre_ping=True,
+    **pool_args,
     # Guarda acentos y ñ tal cual en columnas JSON (permite buscar "diseño")
     json_serializer=lambda obj: json.dumps(obj, ensure_ascii=False),
 )
