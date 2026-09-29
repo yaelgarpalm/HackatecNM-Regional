@@ -76,7 +76,6 @@ export default function Registro() {
     const m: string[] = [];
     if (!role) m.push('Elige quién eres');
     if (word && !org.name.trim()) m.push(`Escribe el nombre de tu ${word.noun}`);
-    if (isNewOrg && registersOrg && !org.state) m.push(`Elige el estado donde está tu ${word?.noun}`);
     if (f.full_name.trim().length < 2) m.push('Escribe tu nombre completo');
     if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) m.push('Escribe un correo válido');
     if (f.password.length < 8) m.push('La contraseña debe tener al menos 8 caracteres');
@@ -138,17 +137,17 @@ export default function Registro() {
                   “{org.name.trim()}” no está registrada: se creará como {word.noun} nueva. Completa sus datos:
                 </Muted>
                 {orgType === 'empresa' && (
-                  <ChipSelect label="Tamaño de la empresa" options={cat?.tamanos_organizacion ?? []} value={org.size}
+                  <ChipSelect label="Tamaño de la empresa (opcional)" options={cat?.tamanos_organizacion ?? []} value={org.size}
                     onChange={setO('size')} />
                 )}
-                <Field label={orgType === 'empresa' ? 'Giro o sector (a qué se dedica)' : 'Área o sector'} value={org.sector}
+                <Field label={orgType === 'empresa' ? 'Giro o sector (opcional)' : 'Área o sector (opcional)'} value={org.sector}
                   onChangeText={setO('sector')} placeholder={orgType === 'empresa' ? 'Ej. Alimentos, Textil, Construcción' : ''} />
                 <Row gap={10} style={{ alignItems: 'flex-start' }}>
                   <View style={{ flexGrow: 1, flexBasis: 200 }}>
-                    <Field label="Municipio o ciudad" value={org.city} onChangeText={setO('city')} placeholder="Ej. San Felipe del Progreso" />
+                    <Field label="Municipio o ciudad (opcional)" value={org.city} onChangeText={setO('city')} placeholder="Ej. San Felipe del Progreso" />
                   </View>
                   <View style={{ flexGrow: 1, flexBasis: 200 }}>
-                    <Combobox label="Estado" value={org.state} onChange={setO('state')} options={ESTADOS} placeholder="Escribe el estado" />
+                    <Combobox label="Estado (opcional)" value={org.state} onChange={setO('state')} options={ESTADOS} placeholder="Escribe el estado" />
                   </View>
                 </Row>
               </>
