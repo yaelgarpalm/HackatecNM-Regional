@@ -1,0 +1,31 @@
+"""Motor y sesión de SQLAlchemy. Funciona con SQLite y PostgreSQL."""
+import json
+from collections.abc import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+from app.core.config import settings
+
+connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+
+engine = create_engine(
+    settings.DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True,
+    # Guarda acentos y ñ tal cual en columnas JSON (permite buscar "diseño")
+    json_serializer=lambda obj: json.dumps(obj, ensure_ascii=False),
+)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

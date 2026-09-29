@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "VinculaTec",
+    "slug": "vinculatec",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "mx.vinculatec.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0F4C81",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "mx.vinculatec.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "scheme": "vinculatec",
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
