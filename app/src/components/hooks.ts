@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
@@ -50,3 +51,13 @@ export const useCatalogs = () => useQuery<Catalogs>({
   queryFn: () => api.get<Catalogs>('/catalogs'),
   staleTime: Infinity,
 });
+
+/** Devuelve el valor después de que el usuario deja de escribir (buscar mientras se escribe sin saturar al servidor). */
+export function useDebounced<T>(value: T, ms = 350) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}

@@ -1,27 +1,17 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
-import { Pressable, Text } from 'react-native';
 
 import { useApi } from '@/components/hooks';
-import { colors } from '@/components/theme';
 import {
-  Badge, Body, Button, Card, confirm, Empty, ErrorView, H2, Loading, Muted, Row, Screen, Section, Stars, StatusBadge, Tags, Title,
-  type IconName,
+  Badge, Body, Button, Card, confirm, Empty, ErrorView, H2, ListRow, Loading, Muted, Row, Screen, Section, Stars, StatusBadge, Tags,
+  Title, type IconName,
 } from '@/components/ui';
 import { useAuth, useUser } from '@/lib/auth';
 import { API_URL } from '@/lib/config';
 import { label, shortDate } from '@/lib/format';
 import type { Organization, Proposal } from '@/lib/types';
 
-function LinkRow({ icon, text, href }: { icon: IconName; text: string; href: Href }) {
-  return (
-    <Pressable onPress={() => router.push(href)}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.border }}>
-      <Ionicons name={icon} size={20} color={colors.primary} />
-      <Text style={{ flex: 1, fontSize: 15, color: colors.text }}>{text}</Text>
-      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-    </Pressable>
-  );
+function LinkRow({ icon, text, href, last }: { icon: IconName; text: string; href: Href; last?: boolean }) {
+  return <ListRow icon={icon} text={text} onPress={() => router.push(href)} last={last} />;
 }
 
 /** Postulaciones que los equipos de estudiantes enviaron a las problemáticas de la organización. */
@@ -86,13 +76,13 @@ export default function Perfil() {
           {user.organization_id && <LinkRow icon="business-outline" text="Mi organización" href="/mi-organizacion" />}
           {user.role === 'universidad' && <LinkRow icon="school-outline" text="Carreras que ofrecemos" href="/mis-carreras" />}
           <LinkRow icon="stats-chart-outline" text="Indicadores de la plataforma" href="/indicadores" />
-          <LinkRow icon="globe-outline" text={user.role === 'admin' ? 'Verificar organizaciones' : 'Directorio de organizaciones'} href="/organizaciones" />
+          <LinkRow icon="globe-outline" text={user.role === 'admin' ? 'Verificar organizaciones' : 'Directorio de organizaciones'} href="/organizaciones" last />
         </Card>
       </Section>
 
-      <Button title="Cerrar sesión" variant="danger" icon="log-out-outline" style={{ marginTop: 20 }}
+      <Button title="Cerrar sesión" variant="destructive" icon="log-out-outline" style={{ marginTop: 20 }}
         onPress={async () => { if (await confirm('¿Cerrar sesión?', 'Tendrás que volver a escribir tu correo y contraseña para entrar.', { confirmText: 'Cerrar sesión', danger: true, icon: 'log-out-outline' })) logout(); }} />
-      <Muted style={{ textAlign: 'center', marginTop: 16, fontSize: 11 }}>Servidor: {API_URL}</Muted>
+      {__DEV__ && <Muted style={{ textAlign: 'center', marginTop: 16, fontSize: 12 }}>Servidor: {API_URL}</Muted>}
     </Screen>
   );
 }

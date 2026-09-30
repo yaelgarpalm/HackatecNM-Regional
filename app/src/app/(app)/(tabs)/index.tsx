@@ -49,7 +49,10 @@ function AcademicHome({ user }: { user: User }) {
 
       <Section title="Mis postulaciones" action={<Button small variant="ghost" title="Mis equipos" onPress={() => router.push('/equipos')} />}>
         {mine.isLoading ? <Loading /> : mine.error ? <ErrorView error={mine.error} onRetry={mine.refetch} /> :
-          !mine.data?.length ? <Muted>Aún no te postulas a ninguna problemática.</Muted> :
+          !mine.data?.length ? (
+            <Empty icon="paper-plane-outline" text="Aún no te postulas a ninguna problemática. Elige una y postúlate con tu equipo."
+              actionTitle="Explorar problemáticas" onAction={() => router.push('/retos')} />
+          ) :
           mine.data.map((p) => (
             <Card key={p.id} onPress={() => router.push(`/reto/${p.challenge_id}`)}>
               <Row style={{ justifyContent: 'space-between' }}>
@@ -64,7 +67,8 @@ function AcademicHome({ user }: { user: User }) {
 
       <Section title="Problemáticas recomendadas para ti">
         {recs.isLoading ? <Loading /> : recs.error ? <ErrorView error={recs.error} onRetry={recs.refetch} /> :
-          !recs.data?.length ? <Empty text="No hay problemáticas que coincidan con tu perfil todavía. Revisa el tablero completo." icon="bulb-outline" /> :
+          !recs.data?.length ? <Empty text="No hay problemáticas que coincidan con tu perfil todavía." icon="bulb-outline"
+            actionTitle="Ver todas las problemáticas" onAction={() => router.push('/retos')} /> :
           recs.data.map((m) => (
             <ChallengeCard key={m.challenge.id} ch={m.challenge}>
               <Card style={{ marginTop: 10, marginBottom: 0, backgroundColor: '#F8FAFC' }}>
@@ -100,7 +104,8 @@ function PublisherHome({ user }: { user: User }) {
 
       <Section title="Mis problemáticas">
         {q.isLoading ? <Loading /> : q.error ? <ErrorView error={q.error} onRetry={q.refetch} /> :
-          !items.length ? <Empty text="Todavía no publicas problemáticas." /> :
+          !items.length ? <Empty text="Todavía no publicas problemáticas. Describe un problema de tu organización y recibe propuestas."
+            icon="megaphone-outline" actionTitle="Publicar la primera" onAction={() => router.push('/publicar')} /> :
           items.map((c) => <ChallengeCard key={c.id} ch={c} />)}
       </Section>
     </Screen>

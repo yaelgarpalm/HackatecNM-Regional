@@ -51,6 +51,9 @@ export const LABELS: Record<string, string> = {
   grande: 'Grande',
   startup: 'Startup',
   cooperativa: 'Cooperativa',
+  // filtros
+  todas: 'Todas',
+  mi_institucion: 'Solo mi institución',
 };
 
 export const label = (v: string | null | undefined) => (v ? LABELS[v] ?? v : '');
@@ -71,6 +74,9 @@ export const timeAgo = (iso: string) => {
   if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
   return shortDate(iso);
 };
+
+/** "1 resultado", "3 resultados" */
+export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export const splitList = (s: string) =>
   s

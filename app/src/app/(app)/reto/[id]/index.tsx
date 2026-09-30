@@ -4,11 +4,11 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useAction, useApi } from '@/components/hooks';
 import { colors } from '@/components/theme';
 import {
-  Badge, Body, Button, Card, confirm, ErrorView, H2, Loading, Muted, Row, Screen, Section, StatusBadge, Tags, Title,
+  Badge, Body, Button, Card, confirm, ErrorView, H2, ListRow, Loading, Muted, Row, Screen, Section, StatusBadge, Tags, Title,
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { isAcademic, useUser } from '@/lib/auth';
-import { label, money, shortDate, goBack, goHome } from '@/lib/format';
+import { label, money, shortDate, goBack } from '@/lib/format';
 import type { Challenge, ChallengeStatus, Proposal } from '@/lib/types';
 
 const TRANSITIONS: Record<ChallengeStatus, ChallengeStatus[]> = {
@@ -68,72 +68,51 @@ export default function RetoDetalle() {
 
   return (
     <Screen onRefresh={() => { q.refetch(); props.refetch(); }} refreshing={q.isRefetching}>
-      <Stack.Screen options={{ title: `Problemática #${ch.id}` }} />
+      <Stack.Screen options={{ title: 'Problemática' }} />
 
       <Row gap={6}>
         <StatusBadge status={ch.status} />
         {ch.confidentiality === 'confidencial' && <Badge text="Confidencial" tone="warning" icon="lock-closed" />}
         <Badge text={ch.category} tone="primary" />
       </Row>
-      <Title>{ch.title}</Title>
+      <Title style={{ marginTop: 6 }}>{ch.title}</Title>
       <Muted>{ch.organization_name} · publicada {shortDate(ch.created_at)}</Muted>
-      <Body style={{ marginTop: 10, fontSize: 16 }}>{ch.summary}</Body>
+      <Body style={{ marginTop: 10, fontSize: 17, lineHeight: 24 }}>{ch.summary}</Body>
 
-      <Section title="Descripción del problema">
-        {ch.nda_required ? (
-          <Card style={{ backgroundColor: colors.warningSoft, borderColor: '#F0D48A' }}>
-            <Row gap={8}>
-              <Ionicons name="lock-closed" size={20} color={colors.warning} />
-              <H2>Información confidencial</H2>
-            </Row>
-            <Body style={{ marginTop: 6 }}>
-              La organización protege los detalles de esta problemática. Para verlos debes aceptar el acuerdo de confidencialidad
-              (NDA): te comprometes a no divulgar la información fuera de la plataforma ni del equipo.
-            </Body>
-            <Button title="Acepto el acuerdo de confidencialidad" icon="document-lock-outline" loading={nda.isPending}
-              onPress={() => nda.mutate(undefined)} style={{ marginTop: 10, alignSelf: 'flex-start' }} />
-          </Card>
-        ) : (
-          <Card><Body>{ch.description}</Body></Card>
-        )}
-      </Section>
-
-      <Section title="Condiciones">
-        <Card>
-          <Info icon="school-outline" title="Disciplinas requeridas" value={ch.required_disciplines.join(', ') || 'Cualquiera'} />
-          <Info icon="git-merge-outline" title="Equipo mínimo" value={`${ch.min_disciplines} carrera(s) distintas`} />
-          <Info icon="ribbon-outline" title="Válido como" value={ch.modalities.map(label).join(', ')} />
-          <Info icon="cash-outline" title="Apoyo económico"
-            value={ch.budget_mxn ? money(ch.budget_mxn) : ch.offers_stipend ? 'Sí' : 'No especificado'} />
-          <Info icon="time-outline" title="Duración estimada" value={ch.duration_weeks ? `${ch.duration_weeks} semanas` : null} />
-          <Info icon="calendar-outline" title="Fecha límite para postularse" value={ch.deadline ? shortDate(ch.deadline) : null} />
-          <Info icon="bulb-outline" title="Propiedad intelectual de los resultados" value={label(ch.ip_model)} />
-          <Tags items={ch.tags} tone="neutral" />
-        </Card>
-      </Section>
-
-      {/* ---------- Estudiante / académico ---------- */}
-      {academic && (
-        <Section title="Participación">
-          {(props.data ?? []).map((p) => (
-            <Card key={p.id}>
-              <Row style={{ justifyContent: 'space-between' }}>
-                <H2>Equipo {p.team?.name}</H2>
-                <StatusBadge status={p.status} />
+      {/* Siguiente paso del estudiante, arriba y visible sin desplazarse */}
+      {academic && ch.status === 'abierto' && (
+        <Card style={{ marginTop: 14, backgroundColor: colors.primarySoft, borderColor: colors.primarySoft }}>
+          {ch.nda_required ? (
+            <>
+              <Row gap={8} style={{ flexWrap: 'nowrap' }}>
+                <Ionicons name="lock-closed" size={18} color={colors.primary} />
+                <Body style={{ flex: 1, fontWeight: '600' }}>Paso 1 de 2: acepta el acuerdo de confidencialidad para ver los detalles y postularte.</Body>
               </Row>
-              {!!p.feedback && <Muted style={{ marginTop: 4 }}>Comentario de la empresa: “{p.feedback}”</Muted>}
-              {p.status === 'enviada' && (
-                <Button small variant="secondary" title="Retirar postulación" style={{ alignSelf: 'flex-start', marginTop: 8 }}
-                  loading={withdraw.isPending}
-                  onPress={async () => { if (await confirm('¿Retirar la postulación?', 'La empresa ya no podrá revisarla. No podrás volver a postular con este equipo.', { confirmText: 'Retirar', danger: true })) withdraw.mutate(p.id); }} />
-              )}
-            </Card>
-          ))}
-          {ch.status === 'abierto' && (
-            <Button title="Postularme con mi equipo" icon="paper-plane-outline" disabled={ch.nda_required}
-              onPress={() => router.push(`/reto/${id}/postular`)} />
+              <Button title="Aceptar acuerdo de confidencialidad" icon="document-lock-outline" loading={nda.isPending}
+                onPress={() => nda.mutate(undefined)} style={{ marginTop: 10 }} />
+            </>
+          ) : (
+            <>
+              {ch.deadline && <Muted style={{ marginBottom: 8 }}>Recibe postulaciones hasta el {shortDate(ch.deadline)}.</Muted>}
+              <Button title="Postularme con mi equipo" icon="paper-plane-outline" onPress={() => router.push(`/reto/${id}/postular`)} />
+            </>
           )}
-          {ch.status === 'abierto' && ch.nda_required && <Muted style={{ marginTop: 6 }}>Primero acepta el acuerdo de confidencialidad.</Muted>}
+        </Card>
+      )}
+
+      {/* Equipo asignado y organización: lo que más usan mientras trabajan */}
+      {participant && active && (
+        <Section title="Colaboración">
+          {accepted && <Muted style={{ marginBottom: 8 }}>Equipo asignado: {accepted.team?.name}</Muted>}
+          <Card style={{ paddingVertical: 0 }}>
+            <ListRow icon="flag-outline" text="Hitos y entregas" onPress={() => router.push(`/reto/${id}/hitos`)} />
+            <ListRow icon="chatbubbles-outline" text="Mensajes" onPress={() => router.push(`/reto/${id}/chat`)} />
+            <ListRow icon="videocam-outline" text="Videollamada" onPress={() => router.push(`/reto/${id}/videollamada`)}
+              last={ch.status !== 'finalizado'} />
+            {ch.status === 'finalizado' && (
+              <ListRow icon="star-outline" text="Evaluar participantes" onPress={() => router.push(`/reto/${id}/evaluar`)} last />
+            )}
+          </Card>
         </Section>
       )}
 
@@ -151,34 +130,73 @@ export default function RetoDetalle() {
           </Row>
           <Row style={{ marginTop: 10 }}>
             {TRANSITIONS[ch.status].map((s) => (
-              <Button key={s} small variant={s === 'cancelado' ? 'danger' : s === 'finalizado' ? 'success' : 'secondary'}
+              <Button key={s} small variant={s === 'cancelado' ? 'destructive' : s === 'finalizado' ? 'success' : 'secondary'}
                 title={TRANSITION_TEXT[s]} loading={setStatus.isPending}
                 onPress={async () => { if (await confirm(`¿${TRANSITION_TEXT[s]}?`, undefined, { confirmText: TRANSITION_TEXT[s], danger: s === 'cancelado' })) setStatus.mutate(s); }} />
             ))}
             {ch.status === 'borrador' && (
-              <Button small variant="danger" title="Eliminar borrador" icon="trash-outline"
+              <Button small variant="destructive" title="Eliminar borrador" icon="trash-outline"
                 onPress={async () => { if (await confirm('¿Eliminar este borrador?', 'Se borrará por completo y no se puede deshacer.', { confirmText: 'Eliminar', danger: true, icon: 'trash-outline' })) remove.mutate(undefined); }} />
             )}
           </Row>
         </Section>
       )}
 
-      {/* ---------- Colaboración (dueño + equipo aceptado) ---------- */}
-      {participant && active && (
-        <Section title="Colaboración">
-          {accepted && <Muted style={{ marginBottom: 8 }}>Equipo asignado: {accepted.team?.name}</Muted>}
-          <Row>
-            <Button title="Hitos y entregas" icon="flag-outline" onPress={() => router.push(`/reto/${id}/hitos`)} />
-            <Button title="Mensajes" variant="secondary" icon="chatbubbles-outline" onPress={() => router.push(`/reto/${id}/chat`)} />
-            <Button title="Videollamada" variant="secondary" icon="videocam-outline" onPress={() => router.push(`/reto/${id}/videollamada`)} />
-            {ch.status === 'finalizado' && (
-              <Button title="Evaluar participantes" variant="success" icon="star-outline" onPress={() => router.push(`/reto/${id}/evaluar`)} />
+      <Section title="Descripción del problema">
+        {ch.nda_required ? (
+          <Card style={{ backgroundColor: colors.warningSoft, borderColor: '#F0D48A' }}>
+            <Row gap={8}>
+              <Ionicons name="lock-closed" size={20} color={colors.warning} />
+              <H2>Información confidencial</H2>
+            </Row>
+            <Body style={{ marginTop: 6 }}>
+              La organización protege los detalles de esta problemática. Para verlos debes aceptar el acuerdo de confidencialidad
+              (NDA): te comprometes a no divulgar la información fuera de la plataforma ni del equipo.
+            </Body>
+            {!(academic && ch.status === 'abierto') && (
+              <Button title="Aceptar acuerdo de confidencialidad" icon="document-lock-outline" loading={nda.isPending}
+                onPress={() => nda.mutate(undefined)} style={{ marginTop: 10, alignSelf: 'flex-start' }} />
             )}
-          </Row>
+          </Card>
+        ) : (
+          <Card><Body>{ch.description}</Body></Card>
+        )}
+      </Section>
+
+      <Section title="Condiciones">
+        <Card>
+          <Info icon="school-outline" title="Disciplinas requeridas" value={ch.required_disciplines.join(', ') || 'Cualquiera'} />
+          <Info icon="git-merge-outline" title="Equipo mínimo" value={ch.min_disciplines === 1 ? '1 carrera' : `${ch.min_disciplines} carreras distintas`} />
+          <Info icon="ribbon-outline" title="Válido como" value={ch.modalities.map(label).join(', ')} />
+          <Info icon="cash-outline" title="Apoyo económico"
+            value={ch.budget_mxn ? money(ch.budget_mxn) : ch.offers_stipend ? 'Sí' : 'No especificado'} />
+          <Info icon="time-outline" title="Duración estimada" value={ch.duration_weeks ? `${ch.duration_weeks} semanas` : null} />
+          <Info icon="calendar-outline" title="Fecha límite para postularse" value={ch.deadline ? shortDate(ch.deadline) : null} />
+          <Info icon="bulb-outline" title="Propiedad intelectual de los resultados" value={label(ch.ip_model)} />
+          <Tags items={ch.tags} tone="neutral" />
+        </Card>
+      </Section>
+
+      {/* ---------- Estudiante / académico ---------- */}
+      {academic && !!props.data?.length && (
+        <Section title="Mis postulaciones">
+          {(props.data ?? []).map((p) => (
+            <Card key={p.id}>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <H2>Equipo {p.team?.name}</H2>
+                <StatusBadge status={p.status} />
+              </Row>
+              {!!p.feedback && <Muted style={{ marginTop: 4 }}>Comentario de la empresa: “{p.feedback}”</Muted>}
+              {p.status === 'enviada' && (
+                <Button small variant="secondary" title="Retirar postulación" style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                  loading={withdraw.isPending}
+                  onPress={async () => { if (await confirm('¿Retirar la postulación?', 'La empresa ya no podrá revisarla. No podrás volver a postular con este equipo.', { confirmText: 'Retirar', danger: true })) withdraw.mutate(p.id); }} />
+              )}
+            </Card>
+          ))}
         </Section>
       )}
-      <Button title="Volver al inicio" variant="secondary" icon="home-outline" onPress={goHome}
-        style={{ marginTop: 24, alignSelf: 'center' }} />
+
     </Screen>
   );
 }

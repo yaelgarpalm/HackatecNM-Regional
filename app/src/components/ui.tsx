@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ComponentProps, ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import {
-  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
+  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Switch as RNSwitch, Text,
   TextInput, View, type StyleProp, type TextInputProps, type ViewStyle,
 } from 'react-native';
 
@@ -45,6 +45,7 @@ export function Card({ children, onPress, style }: { children: ReactNode; onPres
   if (!onPress) return <View style={[s.card, style]}>{children}</View>;
   return (
     <Pressable
+      accessibilityRole="button"
       onPress={onPress}
       style={({ pressed, hovered }: any) => [s.card, (pressed || hovered) && s.cardHover, style]}
     >
@@ -74,7 +75,7 @@ export function Section({ title, action, children }: { title: string; action?: R
 }
 
 // ---------------------------------------------------------------- Controles
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
+type Variant = 'primary' | 'secondary' | 'danger' | 'destructive' | 'ghost' | 'success';
 
 export function Button({
   title, onPress, variant = 'primary', loading, disabled, icon, small, style,
@@ -92,11 +93,13 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
         s.btn, small && s.btnSmall, { backgroundColor: v.bg, borderColor: v.border },
-        (pressed || disabled) && { opacity: 0.6 }, style,
+        pressed && { opacity: 0.7 }, disabled && { opacity: 0.45 }, style,
       ]}
     >
       {loading ? (
@@ -104,7 +107,7 @@ export function Button({
       ) : (
         <Row gap={6} style={{ flexWrap: 'nowrap' }}>
           {icon && <Ionicons name={icon} size={small ? 15 : 18} color={v.fg} />}
-          <Text style={[s.btnText, small && { fontSize: 13 }, { color: v.fg }]}>{title}</Text>
+          <Text style={[s.btnText, small && { fontSize: 14 }, { color: v.fg }]}>{title}</Text>
         </Row>
       )}
     </Pressable>
@@ -115,6 +118,8 @@ const VARIANTS: Record<Variant, { bg: string; fg: string; border: string }> = {
   primary: { bg: colors.primary, fg: '#fff', border: colors.primary },
   secondary: { bg: colors.card, fg: colors.primary, border: colors.border },
   danger: { bg: colors.danger, fg: '#fff', border: colors.danger },
+  // Acción destructiva que no es la principal de la pantalla (p. ej. Cerrar sesión): texto rojo, sin relleno
+  destructive: { bg: colors.card, fg: colors.danger, border: colors.border },
   success: { bg: colors.success, fg: '#fff', border: colors.success },
   ghost: { bg: 'transparent', fg: colors.primary, border: 'transparent' },
 };
@@ -127,12 +132,77 @@ export function Field({
     <View style={[{ marginBottom: 12 }, grow && { flexGrow: 1, flexBasis: 160 }]}>
       <Text style={s.label}>{lbl}</Text>
       <TextInput
-        placeholderTextColor="#98A2AD"
+        placeholderTextColor={colors.placeholder}
+        accessibilityLabel={lbl}
         style={[s.input, props.multiline && { minHeight: 90, textAlignVertical: 'top' }, style]}
         {...props}
       />
-      {hint ? <Muted style={{ marginTop: 4, fontSize: 12 }}>{hint}</Muted> : null}
+      {hint ? <Muted style={{ marginTop: 4 }}>{hint}</Muted> : null}
     </View>
+  );
+}
+
+/** Campo de búsqueda: busca mientras se escribe (con useDebounced) y tiene botón para borrar. */
+export function SearchBar({
+  value, onChangeText, placeholder, label: lbl = 'Buscar',
+}: { value: string; onChangeText: (v: string) => void; placeholder?: string; label?: string }) {
+  return (
+    <View style={s.search}>
+      <Ionicons name="search" size={18} color={colors.muted} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.placeholder}
+        accessibilityLabel={lbl}
+        returnKeyType="search"
+        autoCorrect={false}
+        style={s.searchInput}
+      />
+      {!!value && (
+        <Pressable onPress={() => onChangeText('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Borrar búsqueda">
+          <Ionicons name="close-circle" size={20} color={colors.subtle} />
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+/** Filtros plegables: ocupan una sola línea hasta que el usuario los necesita. */
+export function Filters({
+  active, onClear, children, initiallyOpen = false,
+}: { active: number; onClear: () => void; children: ReactNode; initiallyOpen?: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityState={{ expanded: open }}
+          accessibilityLabel={`Filtros${active ? `, ${active} activos` : ''}`}
+          style={({ pressed }) => [s.filterBtn, (open || active > 0) && s.filterBtnOn, pressed && { opacity: 0.7 }]}>
+          <Ionicons name="options-outline" size={18} color={colors.primary} />
+          <Text style={s.filterText}>Filtros</Text>
+          {active > 0 && <View style={s.filterCount}><Text style={s.filterCountText}>{active}</Text></View>}
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primary} />
+        </Pressable>
+        {active > 0 && <Button small variant="ghost" title="Limpiar filtros" onPress={onClear} />}
+      </Row>
+      {open && <View style={s.filterPanel}>{children}</View>}
+    </View>
+  );
+}
+
+/** Fila de lista que lleva a otra pantalla (con flecha, como en Ajustes). */
+export function ListRow({
+  icon, text, detail, onPress, last,
+}: { icon: IconName; text: string; detail?: string; onPress: () => void; last?: boolean }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={detail ? `${text}, ${detail}` : text}
+      style={({ pressed, hovered }: any) => [s.listRow, !last && s.listRowBorder, (pressed || hovered) && { backgroundColor: colors.bg }]}>
+      <Ionicons name={icon} size={20} color={colors.primary} />
+      <Text style={s.listRowText}>{text}</Text>
+      {!!detail && <Text style={s.muted}>{detail}</Text>}
+      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+    </Pressable>
   );
 }
 
@@ -156,7 +226,8 @@ export function ChipSelect<T extends string>({
       {lbl && <Text style={s.label}>{lbl}</Text>}
       <Row gap={6}>
         {options.map((o) => (
-          <Pressable key={o} onPress={() => toggle(o)} style={[s.chip, selected(o) && s.chipOn]}>
+          <Pressable key={o} onPress={() => toggle(o)} hitSlop={4} accessibilityRole={multi ? 'checkbox' : 'radio'}
+            accessibilityState={{ selected: selected(o), checked: selected(o) }} style={[s.chip, selected(o) && s.chipOn]}>
             <Text style={[s.chipText, selected(o) && { color: '#fff' }]}>{label(o)}</Text>
           </Pressable>
         ))}
@@ -167,9 +238,11 @@ export function ChipSelect<T extends string>({
 
 export function Switch({ label: lbl, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <Pressable onPress={() => onChange(!value)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      <Ionicons name={value ? 'checkbox' : 'square-outline'} size={22} color={colors.primary} />
-      <Text style={s.body}>{lbl}</Text>
+    <Pressable onPress={() => onChange(!value)} accessibilityRole="switch" accessibilityState={{ checked: value }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, minHeight: 44 }}>
+      <Text style={[s.body, { flex: 1 }]}>{lbl}</Text>
+      <RNSwitch value={value} onValueChange={onChange} trackColor={{ true: colors.primary, false: colors.border }}
+        accessibilityLabel={lbl} />
     </Pressable>
   );
 }
@@ -182,7 +255,7 @@ const TONES: Record<Tone, [string, string]> = {
   success: [colors.successSoft, colors.success],
   danger: [colors.dangerSoft, colors.danger],
   warning: [colors.warningSoft, colors.warning],
-  accent: [colors.accentSoft, colors.accent],
+  accent: [colors.accentSoft, colors.accentText],
 };
 
 export function Badge({ text, tone = 'neutral', icon }: { text: string; tone?: Tone; icon?: IconName }) {
@@ -215,8 +288,9 @@ export function Stars({ value, onChange, size = 18 }: { value: number; onChange?
   return (
     <Row gap={2}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Pressable key={n} disabled={!onChange} onPress={() => onChange?.(n)}>
-          <Ionicons name={value >= n - 0.25 ? 'star' : value >= n - 0.75 ? 'star-half' : 'star-outline'} size={size} color="#E0A100" />
+        <Pressable key={n} disabled={!onChange} onPress={() => onChange?.(n)} hitSlop={6}
+          accessibilityRole={onChange ? 'button' : 'image'} accessibilityLabel={`${n} de 5 estrellas`}>
+          <Ionicons name={value >= n - 0.25 ? 'star' : value >= n - 0.75 ? 'star-half' : 'star-outline'} size={size} color={colors.star} />
         </Pressable>
       ))}
     </Row>
@@ -246,25 +320,31 @@ export function Stat({ value, text, icon }: { value: number | string; text: stri
 
 // ---------------------------------------------------------------- Estados
 export const Loading = () => (
-  <View style={{ padding: 40, alignItems: 'center' }}>
+  <View style={{ padding: 40, alignItems: 'center' }} accessibilityRole="progressbar" accessibilityLabel="Cargando">
     <ActivityIndicator color={colors.primary} size="large" />
   </View>
 );
 
 export function ErrorView({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   return (
-    <View style={[s.card, { borderColor: colors.danger, backgroundColor: colors.dangerSoft }]}>
-      <Text style={{ color: colors.danger, fontWeight: '600' }}>{(error as Error)?.message ?? 'Ocurrió un error'}</Text>
+    <View accessibilityRole="alert" style={[s.card, { borderColor: colors.danger, backgroundColor: colors.dangerSoft }]}>
+      <Row gap={8} style={{ flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+        <Ionicons name="alert-circle" size={20} color={colors.danger} />
+        <Text style={{ color: colors.danger, fontWeight: '600', fontSize: 15, flex: 1 }}>{(error as Error)?.message ?? 'Ocurrió un error'}</Text>
+      </Row>
       {onRetry && <Button title="Reintentar" variant="secondary" small onPress={onRetry} style={{ marginTop: 10, alignSelf: 'flex-start' }} />}
     </View>
   );
 }
 
-export function Empty({ text, icon = 'file-tray-outline' }: { text: string; icon?: IconName }) {
+export function Empty({
+  text, icon = 'file-tray-outline', actionTitle, onAction,
+}: { text: string; icon?: IconName; actionTitle?: string; onAction?: () => void }) {
   return (
     <View style={{ alignItems: 'center', padding: 28, gap: 8 }}>
-      <Ionicons name={icon} size={36} color="#A8B3BE" />
+      <Ionicons name={icon} size={36} color={colors.subtle} />
       <Muted style={{ textAlign: 'center' }}>{text}</Muted>
+      {actionTitle && onAction && <Button small variant="secondary" title={actionTitle} onPress={onAction} style={{ marginTop: 4 }} />}
     </View>
   );
 }
@@ -280,29 +360,29 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   cardHover: { borderColor: colors.primary },
-  title: { fontSize: 24, fontWeight: '800', color: colors.text, marginBottom: 4 },
+  title: { fontSize: 26, fontWeight: '800', color: colors.text, marginBottom: 4 },
   h2: { fontSize: 17, fontWeight: '700', color: colors.text },
-  body: { fontSize: 15, color: colors.text, lineHeight: 21 },
-  muted: { fontSize: 13, color: colors.muted, lineHeight: 18 },
-  label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: 6 },
+  body: { fontSize: 16, color: colors.text, lineHeight: 22 },
+  muted: { fontSize: 14, color: colors.muted, lineHeight: 20 },
+  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 6 },
   input: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
-    paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: colors.text,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: colors.text, minHeight: 44,
   },
   btn: {
     borderRadius: radius.md, paddingVertical: 11, paddingHorizontal: 16, alignItems: 'center',
     justifyContent: 'center', borderWidth: 1, minHeight: 44,
   },
-  btnSmall: { paddingVertical: 6, paddingHorizontal: 10, minHeight: 34 },
+  btnSmall: { paddingVertical: 6, paddingHorizontal: 12, minHeight: 40 },
   btnText: { fontSize: 15, fontWeight: '700' },
   chip: {
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: 999,
-    paddingVertical: 6, paddingHorizontal: 12,
+    paddingVertical: 8, paddingHorizontal: 14, minHeight: 40, justifyContent: 'center',
   },
   chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 13, color: colors.text, fontWeight: '600' },
+  chipText: { fontSize: 14, color: colors.text, fontWeight: '600' },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingVertical: 3, paddingHorizontal: 9 },
-  badgeText: { fontSize: 12, fontWeight: '700' },
+  badgeText: { fontSize: 13, fontWeight: '700' },
   barTrack: { flex: 1, height: 8, backgroundColor: colors.primarySoft, borderRadius: 999, overflow: 'hidden' },
   barFill: { height: 8, backgroundColor: colors.primary, borderRadius: 999 },
   stat: {
@@ -310,4 +390,27 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, gap: 2,
   },
   statValue: { fontSize: 24, fontWeight: '800', color: colors.text },
+  search: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.card, borderWidth: 1,
+    borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, minHeight: 44, marginBottom: 10,
+  },
+  searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 10 },
+  filterBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 12, borderRadius: 999,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
+  },
+  filterBtnOn: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  filterText: { fontSize: 14, fontWeight: '700', color: colors.primary },
+  filterCount: {
+    minWidth: 20, height: 20, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center',
+    justifyContent: 'center', paddingHorizontal: 5,
+  },
+  filterCountText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  filterPanel: {
+    marginTop: 10, padding: 12, paddingBottom: 0, backgroundColor: colors.card, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 12, paddingHorizontal: 4 },
+  listRowBorder: { borderBottomWidth: 1, borderColor: colors.border },
+  listRowText: { flex: 1, fontSize: 16, color: colors.text },
 });
