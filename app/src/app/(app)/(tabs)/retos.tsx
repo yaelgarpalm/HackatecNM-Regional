@@ -13,7 +13,8 @@ export default function Retos() {
   const { data: cat } = useCatalogs();
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string | null>('abierto');
+  // Por defecto todas (abiertas, en progreso, finalizadas…); los chips filtran por estado
+  const [status, setStatus] = useState<string | null>(null);
   const [modality, setModality] = useState<string | null>(null);
   const [state, setState] = useState('');
   const [mine, setMine] = useState(false);
