@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { useAction, useApi } from '@/components/hooks';
 import { colors } from '@/components/theme';
@@ -46,33 +46,61 @@ export default function Postular() {
             <Button title="Ir a mis equipos" variant="secondary" onPress={() => router.push('/equipos')} />
           </Card>
         ) : eligible.map((t) => {
-          const ok = t.disciplines.length >= min;
+          const reqs = ch.data?.required_disciplines ?? [];
+          const studentMembers = t.members.filter((m) => m.role !== 'asesor');
+          // Validar carreras requeridas si el reto las especifica
+          const invalidStudents = reqs.length
+            ? studentMembers.filter((m) => !m.user.career || !reqs.some((r) => m.user.career?.toLowerCase().includes(r.toLowerCase())))
+            : [];
+          const hasRequiredDisciplines = invalidStudents.length === 0;
+          const meetsMinDisciplines = t.disciplines.length >= min;
+          const canSubmitTeam = hasRequiredDisciplines && meetsMinDisciplines;
           const on = teamId === t.id;
+
           return (
             <Pressable key={t.id} onPress={() => setTeamId(t.id)}>
               <Card style={on ? { borderColor: colors.primary, borderWidth: 2 } : undefined}>
                 <Row style={{ justifyContent: 'space-between' }}>
                   <H2>{t.name}</H2>
-                  <Badge text={ok ? 'Cumple' : `Faltan ${min - t.disciplines.length} carrera(s)`} tone={ok ? 'success' : 'danger'} />
+                  <Badge
+                    text={canSubmitTeam ? 'Equipo listo' : !meetsMinDisciplines ? `Faltan ${min - t.disciplines.length} carrera(s)` : 'Carrera no requerida'}
+                    tone={canSubmitTeam ? 'success' : 'danger'}
+                  />
                 </Row>
                 <Muted>{t.disciplines.join(' · ') || 'Sin carreras registradas'}</Muted>
-                <Muted>{t.members.length} integrante(s)</Muted>
+                <Muted>{t.members.length} integrante(s) (mínimo exigido: {min} carreras distintas)</Muted>
+
+                {reqs.length > 0 && (
+                  <View style={{ marginTop: 6 }}>
+                    <Muted style={{ fontSize: 12 }}>Disciplinas que busca este reto: {reqs.join(', ')}</Muted>
+                    {invalidStudents.length > 0 && (
+                      <Muted style={{ color: colors.danger, fontSize: 12, marginTop: 2 }}>
+                        ⚠️ Integrantes que no coinciden con las carreras requeridas: {invalidStudents.map((m) => m.user.full_name).join(', ')}
+                      </Muted>
+                    )}
+                  </View>
+                )}
+                {!canSubmitTeam && (
+                  <Button small variant="ghost" title="Completar equipo" icon="person-add-outline"
+                    onPress={() => router.push(`/equipo/${t.id}`)} style={{ alignSelf: 'flex-start', marginTop: 6 }} />
+                )}
               </Card>
             </Pressable>
           );
         })}
       </Section>
 
-      <Section title="2. Propuesta">
+      <Section title="2. Propuesta formal">
         <Card>
           <Field label="Enfoque de solución" value={approach} onChangeText={setApproach} multiline
-            hint="¿Cómo resolverían el problema? Mínimo 20 caracteres." />
-          <Field label="Plan de trabajo (opcional)" value={plan} onChangeText={setPlan} multiline />
-          <Field label="Semanas estimadas" value={weeks} onChangeText={setWeeks} keyboardType="number-pad" />
+            hint="¿Cómo resolverían el problema real? Mínimo 20 caracteres." />
+          <Field label="Plan de trabajo (opcional)" value={plan} onChangeText={setPlan} multiline
+            hint="Metodología, fases o etapas estimadas." />
+          <Field label="Semanas estimadas para completar la solución" value={weeks} onChangeText={setWeeks} keyboardType="number-pad" />
           <Body style={{ marginBottom: 10, fontSize: 13, color: colors.muted }}>
-            Al postular, todos los integrantes quedan cubiertos por el acuerdo de confidencialidad de la problemática.
+            🔒 Al postular, todos los integrantes quedan formalmente cubiertos por el acuerdo de confidencialidad de la problemática.
           </Body>
-          <Button title="Enviar postulación" icon="paper-plane-outline" loading={submit.isPending}
+          <Button title="Enviar postulación formal" icon="paper-plane-outline" loading={submit.isPending}
             disabled={!teamId || approach.trim().length < 20} onPress={() => submit.mutate(undefined)} />
         </Card>
       </Section>

@@ -40,6 +40,7 @@ function BellButton() {
 export default function TabsLayout() {
   const user = useUser();
   const academic = isAcademic(user);
+  const isPublisher = user.role === 'empresa' || user.role === 'gobierno';
 
   return (
     <Tabs
@@ -54,12 +55,28 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarIcon: icon('home-outline') }} />
-      <Tabs.Screen name="retos" options={{ title: 'Problemáticas', tabBarIcon: icon('bulb-outline') }} />
+      <Tabs.Screen
+        name="retos"
+        options={{
+          title: isPublisher ? 'Mis Retos' : 'Oportunidades',
+          tabBarIcon: icon('bulb-outline'),
+        }}
+      />
       <Tabs.Screen
         name="equipos"
-        options={{ title: 'Equipos', tabBarIcon: icon('people-outline'), href: academic ? undefined : null }}
+        options={{
+          title: user.role === 'estudiante' ? 'Mi Equipo' : 'Equipos',
+          tabBarIcon: icon('people-outline'),
+          href: academic ? undefined : null,
+        }}
       />
-      <Tabs.Screen name="capacidades" options={{ title: 'Capacidades', tabBarIcon: icon('flask-outline') }} />
+      <Tabs.Screen
+        name="capacidades"
+        options={{
+          title: 'Capacidades',
+          tabBarIcon: icon('flask-outline'),
+        }}
+      />
       <Tabs.Screen name="perfil" options={{ title: 'Perfil', tabBarIcon: icon('person-circle-outline') }} />
     </Tabs>
   );

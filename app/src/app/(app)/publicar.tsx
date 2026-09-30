@@ -65,53 +65,73 @@ function ChallengeForm({ id, initial }: { id?: string; initial: typeof EMPTY }) 
       <Stack.Screen options={{ title: editing ? 'Editar problemática' : 'Publicar problemática' }} />
       <Muted>Describe el problema en lenguaje sencillo: qué pasa, cómo te afecta y qué resultado esperas.</Muted>
 
-      <Section title="El problema">
+      <Section title="PASO 1 — El problema real">
         <Card>
-          <Field label="Título" value={f.title} onChangeText={set('title')} placeholder="Monitoreo de temperatura en hornos" />
+          <Field label="Título del reto" value={f.title} onChangeText={set('title')} placeholder="Monitoreo de temperatura en hornos" />
           <Field label="Resumen público" value={f.summary} onChangeText={set('summary')} multiline
-            hint="Siempre visible, incluso si la problemática es confidencial (10–500 caracteres)." />
+            hint="Siempre visible en el tablero general (10–500 caracteres)." />
           <Field label="Descripción detallada" value={f.description} onChangeText={set('description')} multiline
-            hint="Si la problemática es confidencial, solo la ve quien acepte el NDA." />
-          <Field label="Categoría" value={f.category} onChangeText={set('category')} placeholder="IoT, Comercio electrónico, Logística…" />
-          <Field label="Etiquetas" value={f.tags} onChangeText={set('tags')} placeholder="sensores, temperatura, inventarios"
-            hint="Separadas por comas. Se usan para sugerir talento y laboratorios." />
+            hint="Detalle profundo del problema. Si marcas confidencialidad, requerirá firma de NDA." />
+          <Field label="Categoría" value={f.category} onChangeText={set('category')} placeholder="IoT, Comercio electrónico, Alimentos, Logística…" />
+          <Field label="Etiquetas técnicas" value={f.tags} onChangeText={set('tags')} placeholder="sensores, temperatura, inventarios"
+            hint="Separadas por comas. El motor de matching las utiliza para encontrar talento afín." />
         </Card>
       </Section>
 
-      <Section title="Equipo buscado">
+      <Section title="PASO 2 — Qué equipo y disciplinas se necesitan">
         <Card>
           <CareersPicker value={f.required_disciplines} onChange={set('required_disciplines')} />
-          <Field label="Mínimo de carreras distintas en el equipo" value={f.min_disciplines} onChangeText={set('min_disciplines')} keyboardType="number-pad" />
-          <ChipSelect label="Válido como" options={cat?.modalidades ?? []} value={f.modalities} onChange={set('modalities')} multi />
+          <Field label="Mínimo de carreras distintas en el equipo (Regla Multidisciplinaria)" value={f.min_disciplines} onChangeText={set('min_disciplines')} keyboardType="number-pad"
+            hint="Fomenta la colaboración interdisciplinaria entre facultades o carreras." />
+          <ChipSelect label="Modalidad formativa válida como" options={cat?.modalidades ?? []} value={f.modalities} onChange={set('modalities')} multi />
         </Card>
       </Section>
 
-      <Section title="Condiciones">
+      <Section title="PASO 3 — Condiciones y tiempos">
         <Card>
           <Row gap={10} style={{ alignItems: 'flex-start' }}>
-            <Field grow label="Presupuesto (MXN)" value={f.budget_mxn} onChangeText={set('budget_mxn')} keyboardType="numeric" />
+            <Field grow label="Presupuesto / Apoyo (MXN)" value={f.budget_mxn} onChangeText={set('budget_mxn')} keyboardType="numeric" />
             <Field grow label="Duración (semanas)" value={f.duration_weeks} onChangeText={set('duration_weeks')} keyboardType="number-pad" />
           </Row>
           <DateField label="Fecha límite para postularse" value={f.deadline} onChange={set('deadline')}
             hint="Último día en que los equipos pueden enviar su postulación." />
           <Switch label="Ofrezco apoyo económico o beca a los estudiantes" value={f.offers_stipend} onChange={set('offers_stipend')} />
-          <ChipSelect label="Confidencialidad" options={cat?.confidencialidad ?? []} value={f.confidentiality}
+        </Card>
+      </Section>
+
+      <Section title="PASO 4 — Condiciones legales y confidencialidad">
+        <Card>
+          <ChipSelect label="Nivel de confidencialidad" options={cat?.confidencialidad ?? []} value={f.confidentiality}
             onChange={(v) => v && set('confidentiality')(v)} />
-          <ChipSelect label="¿De quién serán los resultados? (propiedad intelectual)" options={cat?.propiedad_intelectual ?? []}
+          <Muted style={{ fontSize: 12, marginTop: -4, marginBottom: 8 }}>
+            {f.confidentiality === 'confidencial'
+              ? '🔒 Se exigirá aceptación digital de NDA individual antes de desbloquear la descripción.'
+              : '🌐 Descripción abierta al público.'}
+          </Muted>
+          <ChipSelect label="Propiedad Intelectual de los resultados" options={cat?.propiedad_intelectual ?? []}
             value={f.ip_model} onChange={(v) => v && set('ip_model')(v)} />
         </Card>
       </Section>
 
-      <Row style={{ marginTop: 16 }}>
-        {editing ? (
-          <Button title="Guardar cambios" icon="save-outline" loading={save.isPending} onPress={() => save.mutate(false)} />
-        ) : (
-          <>
-            <Button title="Publicar ahora" icon="megaphone-outline" loading={save.isPending} onPress={() => save.mutate(true)} />
-            <Button title="Guardar borrador" variant="secondary" loading={save.isPending} onPress={() => save.mutate(false)} />
-          </>
-        )}
-      </Row>
+      <Section title="PASO 5 — Publicación y revisión">
+        <Card style={{ backgroundColor: '#F8FAFC' }}>
+          <Muted style={{ fontWeight: '700' }}>Resumen previo a publicar:</Muted>
+          <Muted style={{ marginTop: 4 }}>• Reto: {f.title || '(Sin título)'}</Muted>
+          <Muted>• Disciplinas requeridas: {f.required_disciplines.join(', ') || 'Cualquiera'}</Muted>
+          <Muted>• Mínimo carreras en el equipo: {f.min_disciplines || 1}</Muted>
+          <Muted>• Confidencialidad: {f.confidentiality} · Propiedad intelectual: {f.ip_model}</Muted>
+        </Card>
+        <Row style={{ marginTop: 16 }}>
+          {editing ? (
+            <Button title="Guardar cambios" icon="save-outline" loading={save.isPending} onPress={() => save.mutate(false)} />
+          ) : (
+            <>
+              <Button title="Publicar reto ahora" icon="megaphone-outline" loading={save.isPending} onPress={() => save.mutate(true)} />
+              <Button title="Guardar borrador" variant="secondary" loading={save.isPending} onPress={() => save.mutate(false)} />
+            </>
+          )}
+        </Row>
+      </Section>
     </Screen>
   );
 }

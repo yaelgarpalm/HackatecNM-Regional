@@ -112,9 +112,42 @@ export default function RetoDetalle() {
         </Card>
       </Section>
 
-      {/* ---------- Estudiante / académico ---------- */}
-      {academic && (
-        <Section title="Participación">
+      {/* ==================== VISTA DE PROYECTO ACTIVO ==================== */}
+      {active && (
+        <Card style={{ backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', borderWidth: 1, marginTop: 12 }}>
+          <Row gap={8} style={{ marginBottom: 4 }}>
+            <Ionicons name="rocket-outline" size={22} color={colors.success} />
+            <H2 style={{ color: '#166534' }}>Proyecto Activo</H2>
+          </Row>
+          <Body style={{ color: '#166534' }}>
+            Propuesta seleccionada y equipo asignado. Esta iniciativa está en fase de ejecución y seguimiento técnico.
+          </Body>
+          {accepted && (
+            <Card style={{ marginTop: 10, backgroundColor: '#fff' }}>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <H2>Equipo: {accepted.team?.name}</H2>
+                <Badge text="Equipo Asignado" tone="success" icon="shield-checkmark-outline" />
+              </Row>
+              <Muted style={{ marginTop: 2 }}>{accepted.team?.disciplines.join(' · ')}</Muted>
+              <Body style={{ marginTop: 6 }}>Planteamiento: {accepted.approach}</Body>
+            </Card>
+          )}
+
+          {participant && (
+            <Row style={{ marginTop: 12 }}>
+              <Button title="Hitos y entregas" icon="flag-outline" onPress={() => router.push(`/reto/${id}/hitos`)} />
+              <Button title="Mensajes del proyecto" variant="secondary" icon="chatbubbles-outline" onPress={() => router.push(`/reto/${id}/chat`)} />
+              {ch.status === 'finalizado' && (
+                <Button title="Evaluar participantes" variant="success" icon="star-outline" onPress={() => router.push(`/reto/${id}/evaluar`)} />
+              )}
+            </Row>
+          )}
+        </Card>
+      )}
+
+      {/* ---------- Estudiante / académico (Solo si el reto sigue abierto o tiene postulaciones) ---------- */}
+      {academic && !active && (
+        <Section title="Participación de tu equipo">
           {(props.data ?? []).map((p) => (
             <Card key={p.id}>
               <Row style={{ justifyContent: 'space-between' }}>
@@ -133,19 +166,23 @@ export default function RetoDetalle() {
             <Button title="Postularme con mi equipo" icon="paper-plane-outline" disabled={ch.nda_required}
               onPress={() => router.push(`/reto/${id}/postular`)} />
           )}
-          {ch.status === 'abierto' && ch.nda_required && <Muted style={{ marginTop: 6 }}>Primero acepta el acuerdo de confidencialidad.</Muted>}
+          {ch.status === 'abierto' && ch.nda_required && (
+            <Muted style={{ marginTop: 6 }}>🔒 Debes aceptar el acuerdo de confidencialidad para postular a tu equipo.</Muted>
+          )}
         </Section>
       )}
 
       {/* ---------- Dueño del reto ---------- */}
       {isOwner && (
-        <Section title="Administrar problemática">
+        <Section title="Gestión de la organización">
           <Row>
-            <Button title={`Postulaciones (${ch.proposals_count})`} icon="people-outline" onPress={() => router.push(`/reto/${id}/postulaciones`)} />
-            <Button title="Sugerencias de talento y laboratorios" variant="secondary" icon="sparkles-outline"
+            {ch.status === 'abierto' && (
+              <Button title={`Postulaciones recibidas (${ch.proposals_count})`} icon="people-outline" onPress={() => router.push(`/reto/${id}/postulaciones`)} />
+            )}
+            <Button title="Coincidencias (Talento y Laboratorios)" variant="secondary" icon="sparkles-outline"
               onPress={() => router.push(`/reto/${id}/sugerencias`)} />
             {(ch.status === 'borrador' || ch.status === 'abierto') && (
-              <Button title="Editar" variant="secondary" icon="create-outline"
+              <Button title="Editar reto" variant="secondary" icon="create-outline"
                 onPress={() => router.push({ pathname: '/publicar', params: { id } })} />
             )}
           </Row>

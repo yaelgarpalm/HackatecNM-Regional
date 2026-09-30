@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking } from 'react-native';
 
 import { useApi } from '@/components/hooks';
@@ -40,15 +40,18 @@ export default function Usuario() {
         )}
       </Card>
 
-      <Section title="Evaluaciones en problemáticas reales">
-        {reviews.isLoading ? <Loading /> : !reviews.data?.length ? <Empty text="Aún no hay evaluaciones." icon="star-outline" /> :
+      <Section title="Evaluaciones y experiencia en proyectos">
+        {reviews.isLoading ? <Loading /> : !reviews.data?.length ? <Empty text="Aún no hay evaluaciones ni proyectos concluidos registrados." icon="star-outline" /> :
           reviews.data.map((r) => (
             <Card key={r.id}>
               <Row style={{ justifyContent: 'space-between' }}>
                 <Stars value={r.score} size={16} />
-                <Muted>Problemática #{r.challenge_id} · {shortDate(r.created_at)}</Muted>
+                <Muted>Proyecto #{r.challenge_id} · {shortDate(r.created_at)}</Muted>
               </Row>
-              {!!r.comment && <Body style={{ marginTop: 6 }}>“{r.comment}”</Body>}
+              {!!r.comment && <Body style={{ marginTop: 6, fontStyle: 'italic' }}>“{r.comment}”</Body>}
+              <Button small variant="ghost" title={`Ver detalle del proyecto #${r.challenge_id}`} icon="folder-open-outline"
+                style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                onPress={() => router.push(`/reto/${r.challenge_id}`)} />
             </Card>
           ))}
       </Section>
