@@ -1,5 +1,7 @@
 """Recomendaciones personalizadas, indicadores de vinculación y catálogos."""
-from fastapi import APIRouter, Depends, Query
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -76,6 +78,99 @@ def university_stats(org_id: int, _: User = Depends(get_current_user), db: Sessi
                                      .join(Proposal, Proposal.challenge_id == Challenge.id)
                                      .where(Proposal.team_id.in_(teams),
                                             Proposal.status == ProposalStatus.ACEPTADA)),
+    }
+
+
+# Estado del proyecto desde el punto de vista de la universidad
+def _project_state(p: Proposal) -> str:
+    if p.status == ProposalStatus.ENVIADA:
+        return "postulado"
+    if p.status == ProposalStatus.RECHAZADA:
+        return "no_seleccionado"
+    if p.status == ProposalStatus.RETIRADA:
+        return "retirado"
+    return {ChallengeStatus.FINALIZADO: "finalizado", ChallengeStatus.CANCELADO: "cancelado"}.get(
+        p.challenge.status, "en_curso")
+
+
+@router.get("/stats/university/{org_id}/dashboard")
+def university_dashboard(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Tablero de la universidad: cumplimiento, estado de los proyectos y todos los proyectos de sus alumnos."""
+    if user.role != Role.ADMIN and not (user.role == Role.UNIVERSIDAD and user.organization_id == org_id):
+        raise HTTPException(403, "Solo la oficina de vinculación de esta institución puede ver su tablero")
+
+    alumnos = select(User.id).where(User.organization_id == org_id, User.role == Role.ESTUDIANTE)
+    equipos = select(TeamMember.team_id).where(TeamMember.user_id.in_(alumnos))
+    propuestas = db.scalars(select(Proposal).where(Proposal.team_id.in_(equipos))
+                            .order_by(Proposal.created_at.desc())).all()
+
+    hoy = date.today()
+    proyectos, por_estado = [], {k: 0 for k in ("en_curso", "postulado", "finalizado", "no_seleccionado",
+                                                  "retirado", "cancelado")}
+    hitos_tot = {"total": 0, "aprobados": 0, "en_revision": 0, "pendientes": 0, "con_cambios": 0, "vencidos": 0}
+    al_dia = con_atraso = sin_hitos = 0
+
+    for p in propuestas:
+        ch, estado = p.challenge, _project_state(p)
+        por_estado[estado] += 1
+        h = {"total": 0, "aprobados": 0, "en_revision": 0, "pendientes": 0, "con_cambios": 0, "vencidos": 0}
+        proximo = None
+        if p.status == ProposalStatus.ACEPTADA:
+            for m in sorted(ch.milestones, key=lambda m: (m.due_date is None, m.due_date or hoy)):
+                h["total"] += 1
+                if m.status == MilestoneStatus.APROBADO:
+                    h["aprobados"] += 1
+                    continue
+                if m.status == MilestoneStatus.ENTREGADO:
+                    h["en_revision"] += 1
+                elif m.status == MilestoneStatus.CAMBIOS:
+                    h["con_cambios"] += 1
+                else:
+                    h["pendientes"] += 1
+                if m.status != MilestoneStatus.ENTREGADO and m.due_date and m.due_date < hoy:
+                    h["vencidos"] += 1
+                if proximo is None:
+                    proximo = {"title": m.title, "due_date": m.due_date, "status": m.status.value}
+            for k in hitos_tot:
+                hitos_tot[k] += h[k]
+
+        # Semáforo de cumplimiento del proyecto
+        if estado != "en_curso":
+            cumplimiento = estado
+        elif h["total"] == 0:
+            cumplimiento, sin_hitos = "sin_hitos", sin_hitos + 1
+        elif h["vencidos"]:
+            cumplimiento, con_atraso = "con_atraso", con_atraso + 1
+        else:
+            cumplimiento, al_dia = "al_dia", al_dia + 1
+
+        alumnos_equipo = [
+            {"id": m.user.id, "full_name": m.user.full_name, "career": m.user.career, "role": m.role.value}
+            for m in p.team.members if m.user.organization_id == org_id and m.user.role == Role.ESTUDIANTE
+        ]
+        proyectos.append({
+            "proposal_id": p.id, "challenge_id": ch.id, "challenge_title": ch.title,
+            "organization_name": ch.organization.name if ch.organization else None,
+            "team_name": p.team.name, "students": alumnos_equipo, "state": estado, "compliance": cumplimiento,
+            "milestones": h, "progress": round(h["aprobados"] / h["total"], 3) if h["total"] else 0.0,
+            "next_milestone": proximo, "created_at": p.created_at,
+        })
+
+    return {
+        "resumen": {
+            "estudiantes": _count(db, select(func.count()).select_from(alumnos.subquery())),
+            "estudiantes_en_proyectos": len({a["id"] for pr in proyectos if pr["state"] in ("en_curso", "finalizado")
+                                             for a in pr["students"]}),
+            "empresas_atendidas": len({pr["organization_name"] for pr in proyectos
+                                       if pr["state"] in ("en_curso", "finalizado")}),
+        },
+        "cumplimiento": {
+            **hitos_tot,
+            "porcentaje": round(hitos_tot["aprobados"] / hitos_tot["total"], 3) if hitos_tot["total"] else None,
+            "proyectos_al_dia": al_dia, "proyectos_con_atraso": con_atraso, "proyectos_sin_hitos": sin_hitos,
+        },
+        "proyectos_por_estado": por_estado,
+        "proyectos": proyectos,
     }
 
 

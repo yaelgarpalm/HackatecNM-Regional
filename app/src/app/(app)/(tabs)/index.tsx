@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 
 import { ChallengeCard } from '@/components/ChallengeCard';
+import { UniversityDashboard } from '@/components/UniversityDashboard';
 import { useApi } from '@/components/hooks';
 import {
   Body, Button, Card, Empty, ErrorView, H2, Loading, Muted, Row, ScoreBar, Screen, Section, Stat, StatusBadge, Title,
@@ -14,7 +15,7 @@ export default function Inicio() {
   return (
     <>
       {isAcademic(user) ? <AcademicHome user={user} />
-        : user.role === 'universidad' ? <UniversityHome user={user} />
+        : user.role === 'universidad' ? <UniversityDashboard user={user} />
         : user.role === 'admin' ? <AdminHome user={user} />
         : <PublisherHome user={user} />}
     </>
@@ -102,31 +103,6 @@ function PublisherHome({ user }: { user: User }) {
           !items.length ? <Empty text="Todavía no publicas problemáticas." /> :
           items.map((c) => <ChallengeCard key={c.id} ch={c} />)}
       </Section>
-    </Screen>
-  );
-}
-
-// ---------------------------------------------------------------- Universidad
-function UniversityHome({ user }: { user: User }) {
-  const q = useApi<Record<string, number>>(user.organization_id ? `/stats/university/${user.organization_id}` : null);
-  const s = q.data;
-  return (
-    <Screen onRefresh={q.refetch} refreshing={q.isRefetching}>
-      <Hello user={user} text="Indicadores de vinculación de tu institución." />
-      {q.isLoading ? <Loading /> : q.error ? <ErrorView error={q.error} /> : s && (
-        <Row style={{ marginTop: 16 }} gap={10}>
-          <Stat value={s.estudiantes_registrados} text="Estudiantes registrados" icon="school-outline" />
-          <Stat value={s.capacidades} text="Capacidades publicadas" icon="flask-outline" />
-          <Stat value={s.postulaciones} text="Postulaciones" icon="paper-plane-outline" />
-          <Stat value={s.proyectos_vinculados} text="Proyectos vinculados" icon="link-outline" />
-          <Stat value={s.empresas_atendidas} text="Empresas atendidas" icon="business-outline" />
-        </Row>
-      )}
-      <Row style={{ marginTop: 16 }}>
-        <Button title="Publicar capacidad" icon="add-circle-outline" onPress={() => router.push('/capacidad')} />
-        <Button title="Ver problemáticas abiertas" variant="secondary" onPress={() => router.push('/retos')} />
-        <Button title="Indicadores globales" variant="secondary" onPress={() => router.push('/indicadores')} />
-      </Row>
     </Screen>
   );
 }

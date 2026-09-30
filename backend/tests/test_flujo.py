@@ -146,6 +146,16 @@ def test_flujo_completo(client):
     r = c.post(f"{API}/milestones/{m['id']}/review", headers=h_emp, json={"status": "aprobado"})
     assert r.json()["status"] == "aprobado"
 
+    # --- Tablero de la universidad: ve el proyecto de sus alumnos y su cumplimiento
+    c.post(f"{API}/challenges/{ch['id']}/milestones", headers=h_emp, json={"title": "Reporte", "due_date": "2020-01-10"})
+    d = c.get(f"{API}/stats/university/{uni_id}/dashboard", headers=h_uni).json()
+    p = d["proyectos"][0]
+    assert p["challenge_title"] == ch["title"] and p["state"] == "en_curso" and p["compliance"] == "con_atraso"
+    assert {a["full_name"] for a in p["students"]} == {"Ana López", "Beto Ruiz"}
+    assert p["milestones"]["aprobados"] == 1 and p["milestones"]["vencidos"] == 1 and p["progress"] == 0.5
+    assert d["cumplimiento"]["porcentaje"] == 0.5 and d["proyectos_por_estado"]["en_curso"] == 1
+    assert c.get(f"{API}/stats/university/{uni_id}/dashboard", headers=h_emp).status_code == 403
+
     # --- Participantes y postulaciones propias
     parts = {u["full_name"] for u in c.get(f"{API}/challenges/{ch['id']}/participants", headers=h_beto).json()}
     assert parts == {"Laura Pérez", "Ana López", "Beto Ruiz", "Dra. Martínez"}
