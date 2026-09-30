@@ -14,7 +14,7 @@ function toRoute(link: string | null): Href | null {
   if (!link) return null;
   let m = link.match(/^\/retos\/(\d+)(?:\/(\w+))?/);
   if (m) {
-    const sub = m[2] === 'postulaciones' || m[2] === 'hitos' ? `/${m[2]}` : '';
+    const sub = m[2] === 'postulaciones' || m[2] === 'hitos' || m[2] === 'videollamada' ? `/${m[2]}` : '';
     return `/reto/${m[1]}${sub}` as Href;
   }
   if ((m = link.match(/^\/equipos\/(\d+)/))) return `/equipo/${m[1]}` as Href;

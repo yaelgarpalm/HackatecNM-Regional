@@ -17,7 +17,7 @@ function icon(name: IconName) {
 
 function BellButton() {
   const { data } = useApi<Page<Notification>>('/users/me/notifications', { unread_only: true, size: 1 }, {
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
   });
   const unread = data?.total ?? 0;
   return (
