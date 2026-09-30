@@ -15,8 +15,10 @@ if IS_SQLITE:
 else:
     # Azure Database for PostgreSQL exige conexiones cifradas (SSL)
     connect_args = {} if "sslmode=" in settings.DATABASE_URL else {"sslmode": "require"}
-    # Azure cierra conexiones inactivas: se reciclan antes de que caduquen
-    pool_args = {"pool_size": 5, "max_overflow": 5, "pool_recycle": 1800}
+    # El plan básico de Azure admite ~35 conexiones para todos (backend de cada integrante, --reload,
+    # scripts). Pocas por proceso, y se renuevan antes de que la base cierre las inactivas
+    # (idle_session_timeout = 5 min en la base vinculatec).
+    pool_args = {"pool_size": 3, "max_overflow": 2, "pool_recycle": 240, "pool_timeout": 15}
 
 engine = create_engine(
     settings.DATABASE_URL,

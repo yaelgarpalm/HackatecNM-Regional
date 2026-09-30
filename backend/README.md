@@ -114,6 +114,13 @@ Se usa **Azure Database for PostgreSQL – Flexible Server** (el código ya es c
 5. Al arrancar `uvicorn` las tablas se crean solas. Para cargar los datos de demo (borra todo lo que haya):
    `python seed.py --borrar-todo`
 
+### Si aparece "remaining connection slots are reserved…"
+
+El plan básico de Azure admite unas 35 conexiones para todo el equipo. Cada backend usa hasta 5, y cada
+reinicio de `--reload` puede dejar conexiones huérfanas. La base `vinculatec` las cierra sola tras 5 minutos
+de inactividad (`idle_session_timeout`); si urge liberarlas, en el portal de Azure → **Reiniciar** el servidor,
+o ejecuta en la base: `select pg_terminate_backend(pid) from pg_stat_activity where usename = current_user and state = 'idle' and pid <> pg_backend_pid();`
+
 ## Frontend
 
 La app (web + Android + iOS con un solo código) está en la carpeta `app/` (junto a esta carpeta `backend/`), hecha con Expo (React Native + TypeScript). Ver su README.
