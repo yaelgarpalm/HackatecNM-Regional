@@ -21,12 +21,13 @@ python -m venv .venv
 .venv\Scripts\activate            # en WSL/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 copy .env.example .env            # en WSL/Linux: cp .env.example .env
-python seed.py                    # datos de demo (contraseña: Demo12345)
+                                  # y en .env pon la conexión a Azure PostgreSQL (DATABASE_URL)
 uvicorn app.main:app --reload --host 0.0.0.0
 ```
 
 - Swagger: http://localhost:8000/docs (botón **Authorize** → usuario `ana@tessfp.edu.mx` / `Demo12345`)
-- Pruebas: `pytest -q`
+- Pruebas: `pytest -q` (usan una base temporal propia; nunca tocan Azure)
+- La base de Azure ya tiene datos de demo (contraseña: Demo12345). `python seed.py --borrar-todo` la reinicia **borrando todo**
 - Base de datos en la nube (Azure Database for PostgreSQL): ver la sección **Base de datos en Azure** más abajo
 
 > Para probar desde el celular en la misma red Wi-Fi, usa `--host 0.0.0.0` y apunta la app a `http://<IP-de-tu-PC>:8000`. En el emulador de Android, `localhost` es `10.0.2.2`.

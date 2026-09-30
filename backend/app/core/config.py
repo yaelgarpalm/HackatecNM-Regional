@@ -12,9 +12,10 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api/v1"
     DEBUG: bool = True
 
-    # SQLite en desarrollo; en la nube, Azure Database for PostgreSQL, p. ej.:
+    # Azure Database for PostgreSQL (obligatoria, en backend/.env), p. ej.:
     # DATABASE_URL=postgresql+psycopg://usuario:clave@mi-servidor.postgres.database.azure.com:5432/vinculatec?sslmode=require
-    DATABASE_URL: str = "sqlite:///./vinculatec.db"
+    # Sin valor por defecto: así nadie trabaja sin darse cuenta con una base local distinta a la real.
+    DATABASE_URL: str = ""
 
     # Ubicar organizaciones con OpenStreetMap (Nominatim). Los tests lo apagan.
     GEOCODING_ENABLED: bool = True

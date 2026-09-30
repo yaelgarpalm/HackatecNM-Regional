@@ -7,6 +7,13 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import settings
 
+if not settings.DATABASE_URL:
+    raise RuntimeError(
+        "Falta DATABASE_URL. Copia backend/.env.example como backend/.env y pon la conexión a Azure PostgreSQL "
+        "(pídela a quien administra la base; no se sube a GitHub)."
+    )
+
+# SQLite solo lo usan las pruebas automáticas (base temporal que se borra al terminar)
 IS_SQLITE = settings.DATABASE_URL.startswith("sqlite")
 
 if IS_SQLITE:
