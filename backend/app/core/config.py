@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # Azure Database for PostgreSQL (obligatoria, en backend/.env), p. ej.:
     # DATABASE_URL=postgresql+psycopg://usuario:clave@mi-servidor.postgres.database.azure.com:5432/vinculatec?sslmode=require
-    # Sin valor por defecto: así nadie trabaja sin darse cuenta con una base local distinta a la real.
+    # Sin valor por defecto: la única base de la plataforma es la de Azure.
     DATABASE_URL: str = ""
 
     # Ubicar organizaciones con OpenStreetMap (Nominatim). Los tests lo apagan.

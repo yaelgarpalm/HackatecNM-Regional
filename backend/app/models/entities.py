@@ -19,7 +19,7 @@ def utcnow() -> datetime:
 
 
 def _enum(e):
-    # Guarda el valor ("empresa") y no el nombre ("EMPRESA"); portable SQLite/PostgreSQL
+    # Guarda el valor ("empresa") y no el nombre ("EMPRESA")
     return SAEnum(e, values_callable=lambda x: [i.value for i in x], native_enum=False, length=30)
 
 

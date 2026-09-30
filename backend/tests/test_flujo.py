@@ -1,8 +1,16 @@
 """Prueba de extremo a extremo del flujo principal de la plataforma."""
 import os
 
-os.environ.setdefault("DATABASE_URL", "sqlite:///./test_vinculatec.db")
 os.environ["GEOCODING_ENABLED"] = "false"  # sin llamadas a OpenStreetMap en las pruebas
+
+from sqlalchemy.engine import make_url  # noqa: E402
+
+from app.core.config import settings  # noqa: E402
+
+# Las pruebas BORRAN y recrean tablas: corren en la base "vinculatec_test" del mismo servidor de Azure,
+# nunca en la base real "vinculatec".
+_test_url = make_url(os.environ.get("TEST_DATABASE_URL") or settings.DATABASE_URL).set(database="vinculatec_test")
+settings.DATABASE_URL = _test_url.render_as_string(hide_password=False)
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -20,8 +28,6 @@ def client():
         yield c
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
-    if os.path.exists("test_vinculatec.db"):
-        os.remove("test_vinculatec.db")
 
 
 def register(c, **kw):

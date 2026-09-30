@@ -1,4 +1,4 @@
-"""Motor y sesión de SQLAlchemy. Funciona con SQLite y PostgreSQL."""
+"""Motor y sesión de SQLAlchemy para Azure Database for PostgreSQL."""
 import json
 from collections.abc import Generator
 
@@ -7,25 +7,18 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import settings
 
-if not settings.DATABASE_URL:
+if not settings.DATABASE_URL.startswith("postgresql"):
     raise RuntimeError(
         "Falta DATABASE_URL. Copia backend/.env.example como backend/.env y pon la conexión a Azure PostgreSQL "
         "(pídela a quien administra la base; no se sube a GitHub)."
     )
 
-# SQLite solo lo usan las pruebas automáticas (base temporal que se borra al terminar)
-IS_SQLITE = settings.DATABASE_URL.startswith("sqlite")
-
-if IS_SQLITE:
-    connect_args: dict = {"check_same_thread": False}
-    pool_args: dict = {}
-else:
-    # Azure Database for PostgreSQL exige conexiones cifradas (SSL)
-    connect_args = {} if "sslmode=" in settings.DATABASE_URL else {"sslmode": "require"}
-    # El plan básico de Azure admite ~35 conexiones para todos (backend de cada integrante, --reload,
-    # scripts). Pocas por proceso, y se renuevan antes de que la base cierre las inactivas
-    # (idle_session_timeout = 5 min en la base vinculatec).
-    pool_args = {"pool_size": 3, "max_overflow": 2, "pool_recycle": 240, "pool_timeout": 15}
+# Azure Database for PostgreSQL exige conexiones cifradas (SSL)
+connect_args = {} if "sslmode=" in settings.DATABASE_URL else {"sslmode": "require"}
+# El plan básico de Azure admite ~35 conexiones para todos (backend de cada integrante, --reload,
+# scripts). Pocas por proceso, y se renuevan antes de que la base cierre las inactivas
+# (idle_session_timeout = 5 min en la base vinculatec).
+pool_args = {"pool_size": 3, "max_overflow": 2, "pool_recycle": 240, "pool_timeout": 15}
 
 engine = create_engine(
     settings.DATABASE_URL,

@@ -99,7 +99,7 @@ seed.py                # datos de demostración
 
 ## Base de datos en Azure
 
-Se usa **Azure Database for PostgreSQL – Flexible Server** (el código ya es compatible; en local sigue funcionando con SQLite).
+La única base de datos es **Azure Database for PostgreSQL – Flexible Server**. Las pruebas (`pytest`) usan otra base del mismo servidor, `vinculatec_test`, que borran y recrean; nunca tocan `vinculatec`.
 
 1. En el portal de Azure: **Crear un recurso → Azure Database for PostgreSQL → Servidor flexible**.
    - Carga de trabajo: *Desarrollo* (el nivel más barato, Burstable B1ms).

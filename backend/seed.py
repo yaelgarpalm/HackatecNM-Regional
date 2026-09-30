@@ -2,8 +2,8 @@
 
 Uso:  python seed.py        (contraseña de todas las cuentas: Demo12345)
 
-BORRA todas las tablas antes de cargar. Contra una base que no sea SQLite local
-(p. ej. Azure) exige confirmar con:  python seed.py --borrar-todo
+BORRA todas las tablas de la base de Azure antes de cargar; exige confirmar con:
+    python seed.py --borrar-todo
 """
 import sys
 from datetime import date, timedelta
@@ -110,7 +110,7 @@ def run() -> None:
 
 
 if __name__ == "__main__":
-    if not engine.url.drivername.startswith("sqlite") and "--borrar-todo" not in sys.argv:
+    if "--borrar-todo" not in sys.argv:
         sys.exit(f"La base configurada es {engine.url.render_as_string(hide_password=True)}\n"
                  "seed.py BORRA todos los datos. Si de verdad quieres reiniciarla, ejecuta:\n"
                  "  python seed.py --borrar-todo")
