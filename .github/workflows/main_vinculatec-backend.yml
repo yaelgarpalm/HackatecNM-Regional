@@ -77,4 +77,4 @@ jobs:
           startup-command: 'python -m uvicorn app.main:app --host 0.0.0.0 --port 8000'
 
       - name: Verify deployed API health
-        run: curl --fail --silent --show-error --retry 12 --retry-delay 10 --retry-connrefused https://vinculatec-backend-b5befvcybsdwgta3.mexicocentral-01.azurewebsites.net/health
+        run: curl --fail --silent --show-error --retry 12 --retry-delay 10 --retry-connrefused --retry-all-errors --max-time 20 https://vinculatec-backend-b5befvcybsdwgta3.mexicocentral-01.azurewebsites.net/health
