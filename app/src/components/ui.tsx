@@ -54,7 +54,7 @@ export function Card({ children, onPress, style }: { children: ReactNode; onPres
 }
 
 // ---------------------------------------------------------------- Texto
-export const Title = ({ children }: { children: ReactNode }) => <Text style={s.title}>{children}</Text>;
+export const Title = ({ children, style }: { children: ReactNode; style?: any }) => <Text style={[s.title, style]}>{children}</Text>;
 export const H2 = ({ children, style }: { children: ReactNode; style?: any }) => <Text style={[s.h2, style]}>{children}</Text>;
 export const Body = ({ children, style, numberOfLines }: { children: ReactNode; style?: any; numberOfLines?: number }) => (
   <Text style={[s.body, style]} numberOfLines={numberOfLines}>{children}</Text>

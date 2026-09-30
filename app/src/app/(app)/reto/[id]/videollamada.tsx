@@ -1,21 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-native';
 
+import { useApi } from '@/components/hooks';
+import { MeetingFrame } from '@/components/MeetingFrame';
 import { colors } from '@/components/theme';
-import { Body, Button, Card, Muted, Screen, Section, Title } from '@/components/ui';
+import { Body, Button, Card, ErrorView, Loading, Muted, Screen, Section, Title } from '@/components/ui';
 
-const JITSI_BASE_URL = 'https://meet.jit.si/';
+type Room = { room: string; url: string; display_name: string };
 
 export default function Videollamada() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const room = `VinculaTec-Problematica-${String(id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
-  const meetingUrl = `${JITSI_BASE_URL}${room}`;
+  // La sala la entrega el backend solo a la empresa y al equipo aceptado (nombre imposible de adivinar)
+  const q = useApi<Room>(`/challenges/${id}/videocall`);
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  if (q.isLoading) return <Loading />;
+  if (q.error || !q.data) return <Screen><ErrorView error={q.error} onRetry={q.refetch} /></Screen>;
+  const { room, url, display_name } = q.data;
+  // Entra directo con el nombre de la persona, sin la pantalla previa de Jitsi
+  const meetingUrl = `${url}#userInfo.displayName=${encodeURIComponent(JSON.stringify(display_name))}`
+    + '&config.prejoinPageEnabled=false&config.defaultLanguage="es"';
 
   if (started) {
     return (
@@ -34,25 +43,14 @@ export default function Videollamada() {
               <Muted style={{ marginTop: 6 }}>
                 Comprueba tu conexión a internet e intenta entrar nuevamente.
               </Muted>
-              <Button title="Reintentar" icon="refresh" onPress={() => { setError(false); setLoading(true); }} style={{ marginTop: 12 }} />
+              <Button title="Reintentar" icon="refresh" onPress={() => { setError(false); setLoading(true); setAttempt((a) => a + 1); }} style={{ marginTop: 12 }} />
               <Button title="Volver" variant="secondary" onPress={() => setStarted(false)} style={{ marginTop: 8 }} />
             </Card>
           </View>
         )}
-        <WebView
-          source={{ uri: meetingUrl }}
-          style={styles.webview}
-          javaScriptEnabled
-          domStorageEnabled
-          allowsInlineMediaPlayback
-          mediaPlaybackRequiresUserAction={false}
-          startInLoadingState
-          onLoadStart={() => { setLoading(true); setError(false); }}
-          onLoadEnd={() => setLoading(false)}
-          onError={() => { setLoading(false); setError(true); }}
-          originWhitelist={['https://*', 'http://*']}
-          allowsFullscreenVideo
-        />
+        <MeetingFrame key={attempt} url={meetingUrl}
+          onLoad={() => setLoading(false)}
+          onError={() => { setLoading(false); setError(true); }} />
       </View>
     );
   }
@@ -84,6 +82,10 @@ export default function Videollamada() {
             onPress={() => { setError(false); setLoading(true); setStarted(true); }}
             style={{ marginTop: 14 }}
           />
+          {Platform.OS === 'web' && (
+            <Button title="Abrir en una pestaña nueva" variant="secondary" icon="open-outline"
+              onPress={() => Linking.openURL(meetingUrl)} style={{ marginTop: 8 }} />
+          )}
         </Card>
       </Section>
 
@@ -109,7 +111,6 @@ export default function Videollamada() {
 
 const styles = StyleSheet.create({
   meeting: { flex: 1, backgroundColor: '#000' },
-  webview: { flex: 1, backgroundColor: '#000' },
   loading: {
     position: 'absolute',
     zIndex: 2,

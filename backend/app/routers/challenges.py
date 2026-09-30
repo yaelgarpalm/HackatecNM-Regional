@@ -1,10 +1,13 @@
 """Problemáticas: publicación, NDA, postulaciones, seguimiento, mensajes y evaluaciones."""
+import hashlib
+import hmac
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import String, cast, or_, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.deps import Pagination, get_current_user, get_optional_user, require_roles
 from app.models import (
@@ -363,6 +366,19 @@ def match_talent(ch_id: int, role: Role = Query(Role.ESTUDIANTE), limit: int = Q
         if score > 0:
             results.append(UserMatch(user=UserPublic.model_validate(u), score=score, reasons=reasons))
     return sorted(results, key=lambda r: r.score, reverse=True)[:limit]
+
+
+# ================================================================ Videollamada
+@router.get("/challenges/{ch_id}/videocall")
+def videocall_room(ch_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Sala de videollamada (Jitsi Meet) de la problemática, solo para la empresa y el equipo aceptado.
+
+    El nombre de la sala lleva una firma derivada de SECRET_KEY: no se puede adivinar a partir del id.
+    """
+    ch = _participant(db, ch_id, user)
+    firma = hmac.new(settings.SECRET_KEY.encode(), f"videocall:{ch.id}".encode(), hashlib.sha256).hexdigest()[:16]
+    room = f"VinculaTec-{ch.id}-{firma}"
+    return {"room": room, "url": f"https://meet.jit.si/{room}", "display_name": user.full_name}
 
 
 # ================================================================ Seguimiento (hitos)

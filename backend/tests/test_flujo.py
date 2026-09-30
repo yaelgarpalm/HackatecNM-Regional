@@ -149,6 +149,12 @@ def test_flujo_completo(client):
     # --- Participantes y postulaciones propias
     parts = {u["full_name"] for u in c.get(f"{API}/challenges/{ch['id']}/participants", headers=h_beto).json()}
     assert parts == {"Laura Pérez", "Ana López", "Beto Ruiz", "Dra. Martínez"}
+
+    # --- Videollamada: misma sala para empresa y equipo; nadie más la obtiene
+    sala = c.get(f"{API}/challenges/{ch['id']}/videocall", headers=h_emp).json()
+    assert sala == {**c.get(f"{API}/challenges/{ch['id']}/videocall", headers=h_ana).json(), "display_name": "Laura Pérez"}
+    assert sala["room"] != f"VinculaTec-{ch['id']}" and sala["url"].startswith("https://meet.jit.si/")
+    assert c.get(f"{API}/challenges/{ch['id']}/videocall", headers=h_uni).status_code == 403
     mine = c.get(f"{API}/proposals/mine", headers=h_prof).json()
     assert len(mine) == 1 and mine[0]["status"] == "aceptada"
 

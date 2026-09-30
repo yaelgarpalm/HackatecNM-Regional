@@ -170,6 +170,7 @@ export default function RetoDetalle() {
           <Row>
             <Button title="Hitos y entregas" icon="flag-outline" onPress={() => router.push(`/reto/${id}/hitos`)} />
             <Button title="Mensajes" variant="secondary" icon="chatbubbles-outline" onPress={() => router.push(`/reto/${id}/chat`)} />
+            <Button title="Videollamada" variant="secondary" icon="videocam-outline" onPress={() => router.push(`/reto/${id}/videollamada`)} />
             {ch.status === 'finalizado' && (
               <Button title="Evaluar participantes" variant="success" icon="star-outline" onPress={() => router.push(`/reto/${id}/evaluar`)} />
             )}
