@@ -261,3 +261,16 @@ def test_registro_de_empresa(client):
     r = c.post(f"{API}/auth/register", json={"email": "intruso@x.mx", "password": "Secreta123", "full_name": "Intruso",
                                              "role": "empresa", "organization_id": u["organization_id"]})
     assert r.status_code == 422
+
+
+def test_fecha_limite_no_puede_ser_pasada(client):
+    c = client
+    register(c, email="fechas@empresa.mx", full_name="Fechas", role="empresa",
+             organization={"name": "Empresa de Fechas", "type": "empresa"})
+    h = login(c, "fechas@empresa.mx")
+    base = {"title": "Problemática con fecha", "summary": "Resumen suficientemente largo.",
+            "description": "Descripción suficientemente larga para validar.", "category": "Otro"}
+    r = c.post(f"{API}/challenges", headers=h, json={**base, "deadline": "2007-12-02"})
+    assert r.status_code == 422 and "ya pasó" in r.json()["detail"]
+    r = c.post(f"{API}/challenges", headers=h, json={**base, "deadline": "2099-01-15"})
+    assert r.status_code == 201 and r.json()["deadline"] == "2099-01-15"

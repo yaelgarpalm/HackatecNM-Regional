@@ -1,4 +1,6 @@
 """Problemáticas: publicación, NDA, postulaciones, seguimiento, mensajes y evaluaciones."""
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import String, cast, or_, select
 from sqlalchemy.orm import Session
@@ -52,6 +54,11 @@ def _participant(db: Session, ch_id: int, user: User) -> Challenge:
     if not is_challenge_participant(db, user, ch):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo participantes de la problemática")
     return ch
+
+
+def _check_deadline(deadline: date | None) -> None:
+    if deadline and deadline < date.today():
+        raise HTTPException(422, "La fecha límite para postularse no puede ser un día que ya pasó")
 
 
 def _team_user_ids(db: Session, team_id: int) -> list[int]:
@@ -116,6 +123,7 @@ def create_challenge(data: ChallengeCreate,
     """Una empresa o dependencia publica un problema real."""
     if not user.organization_id:
         raise HTTPException(422, "Tu cuenta no está vinculada a una organización")
+    _check_deadline(data.deadline)
     payload = data.model_dump(exclude={"publish"})
     payload["modalities"] = [m.value for m in data.modalities]
     ch = Challenge(organization_id=user.organization_id, created_by_id=user.id,
@@ -144,6 +152,8 @@ def update_challenge(ch_id: int, data: ChallengeUpdate,
     if ch.status not in (ChallengeStatus.BORRADOR, ChallengeStatus.ABIERTO):
         raise HTTPException(409, "No se puede editar una problemática en progreso o cerrada")
     changes = data.model_dump(exclude_unset=True)
+    if changes.get("deadline") != ch.deadline:  # una fecha ya guardada puede conservarse aunque haya pasado
+        _check_deadline(changes.get("deadline"))
     if "modalities" in changes and changes["modalities"] is not None:
         changes["modalities"] = [m.value if hasattr(m, "value") else m for m in changes["modalities"]]
     for k, v in changes.items():

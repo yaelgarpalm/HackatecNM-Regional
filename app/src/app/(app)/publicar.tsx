@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { useAction, useApi, useCatalogs } from '@/components/hooks';
 import { CareersPicker } from '@/components/CareerPicker';
+import { DateField } from '@/components/DateField';
 import { Button, Card, ChipSelect, Field, Loading, Muted, Row, Screen, Section, Switch } from '@/components/ui';
 import { api } from '@/lib/api';
 import { splitList } from '@/lib/format';
@@ -84,8 +85,9 @@ function ChallengeForm({ id, initial }: { id?: string; initial: typeof EMPTY }) 
           <Row gap={10} style={{ alignItems: 'flex-start' }}>
             <Field grow label="Presupuesto (MXN)" value={f.budget_mxn} onChangeText={set('budget_mxn')} keyboardType="numeric" />
             <Field grow label="Duración (semanas)" value={f.duration_weeks} onChangeText={set('duration_weeks')} keyboardType="number-pad" />
-            <Field grow label="Fecha límite (AAAA-MM-DD)" value={f.deadline} onChangeText={set('deadline')} placeholder="2026-12-01" />
           </Row>
+          <DateField label="Fecha límite para postularse" value={f.deadline} onChange={set('deadline')}
+            hint="Último día en que los equipos pueden enviar su postulación." />
           <Switch label="Ofrezco apoyo económico o beca a los estudiantes" value={f.offers_stipend} onChange={set('offers_stipend')} />
           <ChipSelect label="Confidencialidad" options={cat?.confidencialidad ?? []} value={f.confidentiality}
             onChange={(v) => v && set('confidentiality')(v)} />
