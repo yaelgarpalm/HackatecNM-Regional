@@ -160,6 +160,18 @@ export function UniversityDashboard({ user }: { user: User }) {
 
       {q.isLoading ? <Loading /> : q.error || !d || !c || !k ? <ErrorView error={q.error} onRetry={q.refetch} /> : (
         <>
+          <Section title="Estado de los proyectos">
+            <Row gap={10} style={{ alignItems: 'stretch' }}>
+              <ChartCard title="Proyectos por estado" subtitle="Todas las postulaciones y proyectos de tus alumnos">
+                {estadosSeg.some((x) => x.value > 0) ? <PieChart segments={estadosSeg} unit=" proyectos" centerLabel="proyectos" />
+                  : <Muted>Tus alumnos todavía no se postulan a ninguna problemática.</Muted>}
+              </ChartCard>
+              <ChartCard title="Postulaciones por mes" subtitle="Últimos 6 meses">
+                <MonthlyColumns data={d.tendencia} />
+              </ChartCard>
+            </Row>
+          </Section>
+
           {/* ---------- KPIs ---------- */}
           <Section title="Indicadores clave">
             <Row gap={10}>
@@ -201,18 +213,6 @@ export function UniversityDashboard({ user }: { user: User }) {
                     note: p.compliance === 'con_atraso' ? `${p.milestones.vencidos} hito(s) vencido(s) · ${p.organization_name}` : p.organization_name ?? undefined,
                   }))} />
                 )}
-              </ChartCard>
-            </Row>
-          </Section>
-
-          <Section title="Estado de los proyectos">
-            <Row gap={10} style={{ alignItems: 'stretch' }}>
-              <ChartCard title="Proyectos por estado" subtitle="Todas las postulaciones y proyectos de tus alumnos">
-                {estadosSeg.some((x) => x.value > 0) ? <PieChart segments={estadosSeg} unit=" proyectos" centerLabel="proyectos" />
-                  : <Muted>Tus alumnos todavía no se postulan a ninguna problemática.</Muted>}
-              </ChartCard>
-              <ChartCard title="Postulaciones por mes" subtitle="Últimos 6 meses">
-                <MonthlyColumns data={d.tendencia} />
               </ChartCard>
             </Row>
           </Section>
