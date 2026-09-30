@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     # DATABASE_URL=postgresql+psycopg://usuario:clave@mi-servidor.postgres.database.azure.com:5432/vinculatec?sslmode=require
     DATABASE_URL: str = "sqlite:///./vinculatec.db"
 
+    # Ubicar organizaciones con OpenStreetMap (Nominatim). Los tests lo apagan.
+    GEOCODING_ENABLED: bool = True
+
     # JWT
     SECRET_KEY: str = "cambia-esta-clave-en-produccion-por-una-larga-y-aleatoria"
     ALGORITHM: str = "HS256"

@@ -55,6 +55,14 @@ export interface Organization {
   website: string | null;
   verified: boolean;
   created_at: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface NearbyOrganization extends Organization {
+  distance_km: number;
+  capabilities: number;
+  careers: string[];
 }
 
 export interface Capability {

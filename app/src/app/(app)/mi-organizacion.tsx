@@ -1,11 +1,13 @@
 import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useAction, useApi, useCatalogs } from '@/components/hooks';
-import { Badge, Button, Card, ChipSelect, Field, Loading, Row, Screen } from '@/components/ui';
+import { OsmMap } from '@/components/OsmMap';
+import { Badge, Button, Card, ChipSelect, Field, Loading, Muted, Row, Screen, Section } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useUser } from '@/lib/auth';
 import { goBack, label } from '@/lib/format';
+import type { MapMarker } from '@/lib/mapHtml';
 import type { Organization } from '@/lib/types';
 
 export default function MiOrganizacionPage() {
@@ -45,6 +47,50 @@ function OrgForm({ org }: { org: Organization }) {
         <Field label="Sitio web" value={f.website} onChangeText={set('website')} autoCapitalize="none" />
         <Button title="Guardar" icon="save-outline" loading={save.isPending} onPress={() => save.mutate(undefined)} />
       </Card>
+
+      <Location org={org} />
     </Screen>
+  );
+}
+
+/** Ubicación de la organización en el mapa: por su ciudad (OpenStreetMap) o tocando el mapa. */
+function Location({ org }: { org: Organization }) {
+  const [current, setCurrent] = useState(
+    org.latitude != null && org.longitude != null ? { lat: org.latitude, lng: org.longitude } : null);
+  const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null);
+
+  const locate = useAction(() => api.post<Organization>(`/organizations/${org.id}/geocode`), {
+    successMessage: 'Ubicación encontrada', successDetail: 'Te ubicamos por tu ciudad. Si no es exacta, toca el mapa.',
+    onSuccess: (o) => { setCurrent({ lat: o.latitude!, lng: o.longitude! }); setPicked(null); },
+  });
+  const savePin = useAction((p: { lat: number; lng: number }) =>
+    api.patch<Organization>(`/organizations/${org.id}`, { latitude: p.lat, longitude: p.lng }), {
+    successMessage: 'Ubicación guardada', successDetail: 'Ya apareces en el mapa de VinculaTec.',
+    onSuccess: (o) => { setCurrent({ lat: o.latitude!, lng: o.longitude! }); setPicked(null); },
+  });
+
+  const markers = useMemo<MapMarker[]>(
+    () => (current ? [{ id: 'home', kind: 'home', ...current, title: org.name, subtitle: 'Ubicación guardada' }] : []),
+    [current, org.name]);
+
+  return (
+    <Section title="Ubicación en el mapa">
+      <Card>
+        <Muted style={{ marginBottom: 10 }}>
+          {current ? 'Así te ven las demás organizaciones en el mapa. Toca el mapa si quieres corregirla.'
+            : 'Aún no tienes ubicación. Te ubicamos por tu ciudad o toca el mapa en el lugar exacto.'}
+        </Muted>
+        <OsmMap markers={markers} center={current ?? undefined} pickable height={300}
+          onPick={(lat, lng) => setPicked({ lat, lng })} />
+        <Row style={{ marginTop: 10 }}>
+          {picked && (
+            <Button title="Guardar esta ubicación" icon="location" loading={savePin.isPending} onPress={() => savePin.mutate(picked)} />
+          )}
+          <Button title="Ubicar por mi ciudad" variant="secondary" icon="navigate-outline" loading={locate.isPending}
+            onPress={() => locate.mutate(undefined)} />
+        </Row>
+        {picked && <Muted style={{ marginTop: 6 }}>Punto elegido: {picked.lat.toFixed(4)}, {picked.lng.toFixed(4)}</Muted>}
+      </Card>
+    </Section>
   );
 }

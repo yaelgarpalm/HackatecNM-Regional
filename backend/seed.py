@@ -26,15 +26,18 @@ def run() -> None:
 
     tessfp = Organization(name="TES San Felipe del Progreso", type=OrgType.UNIVERSIDAD, verified=True,
                           city="San Felipe del Progreso", state="Estado de México",
-                          description="Tecnológico de Estudios Superiores")
+                          description="Tecnológico de Estudios Superiores", latitude=19.7128, longitude=-99.9531)
     uaem = Organization(name="Universidad Autónoma del Estado de México", type=OrgType.UNIVERSIDAD,
-                        verified=True, city="Toluca", state="Estado de México")
+                        verified=True, city="Toluca", state="Estado de México", latitude=19.2826, longitude=-99.6557)
     panaderia = Organization(name="Panadería La Espiga", type=OrgType.EMPRESA, size=OrgSize.MICRO,
-                             sector="Alimentos", city="Atlacomulco", state="Estado de México", verified=True)
+                             sector="Alimentos", city="Atlacomulco", state="Estado de México", verified=True,
+                             latitude=19.7976, longitude=-99.8765)
     coop = Organization(name="Cooperativa Textil Mazahua", type=OrgType.EMPRESA, size=OrgSize.COOPERATIVA,
-                        sector="Textil artesanal", city="San Felipe del Progreso", state="Estado de México")
+                        sector="Textil artesanal", city="San Felipe del Progreso", state="Estado de México",
+                        latitude=19.7150, longitude=-99.9480)
     municipio = Organization(name="H. Ayuntamiento de San Felipe del Progreso", type=OrgType.GOBIERNO,
-                             city="San Felipe del Progreso", state="Estado de México", verified=True)
+                             city="San Felipe del Progreso", state="Estado de México", verified=True,
+                             latitude=19.7127, longitude=-99.9525)
     db.add_all([tessfp, uaem, panaderia, coop, municipio])
     db.flush()
 

@@ -43,6 +43,9 @@ class Organization(TimestampMixin, Base):
     state: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
     website: Mapped[str | None] = mapped_column(String(255), nullable=True)
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Ubicación para el mapa (se calcula de ciudad/estado o se fija tocando el mapa)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     members: Mapped[list["User"]] = relationship(back_populates="organization")
     capabilities: Mapped[list["Capability"]] = relationship(back_populates="organization", cascade="all, delete-orphan")

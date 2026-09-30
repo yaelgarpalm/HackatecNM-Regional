@@ -110,12 +110,23 @@ class OrganizationUpdate(BaseModel):
     city: str | None = None
     state: str | None = None
     website: str | None = None
+    # Ubicación fijada a mano en el mapa
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
 
 
 class OrganizationOut(ORM, OrganizationBase):
     id: int
     verified: bool
     created_at: datetime
+    latitude: float | None = None
+    longitude: float | None = None
+
+
+class NearbyOrganization(OrganizationOut):
+    distance_km: float
+    capabilities: int = 0
+    careers: list[str] = []
 
 
 # ---------------------------------------------------------------- Usuarios

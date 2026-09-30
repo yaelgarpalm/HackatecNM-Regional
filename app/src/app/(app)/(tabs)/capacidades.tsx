@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { useApi, useCatalogs } from '@/components/hooks';
@@ -18,10 +18,13 @@ export default function Capacidades() {
   const [search, setSearch] = useState('');
   const [type, setType] = useState<string | null>(null);
   const [onlyMine, setOnlyMine] = useState(false);
+  // Desde el mapa de la empresa: ver solo las capacidades de una universidad
+  const params = useLocalSearchParams<{ org?: string }>();
+  const orgFilter = params.org ? Number(params.org) : null;
 
   const canManage = (user.role === 'universidad' || user.role === 'academico' || user.role === 'admin') && !!user.organization_id;
   const r = useApi<Page<Capability>>('/capabilities', {
-    q: search, type, size: 100, organization_id: onlyMine ? user.organization_id : undefined, available: onlyMine ? undefined : true,
+    q: search, type, size: 100, organization_id: onlyMine ? user.organization_id : orgFilter ?? undefined, available: onlyMine ? undefined : true,
   });
   const orgs = useApi<Page<Organization>>('/organizations', { type: 'universidad', size: 100 });
   const orgName = (id: number) => orgs.data?.items.find((o) => o.id === id)?.name ?? '';
@@ -36,6 +39,12 @@ export default function Capacidades() {
             <Button small variant="secondary" title="Subir carreras" icon="school-outline" onPress={() => router.push('/mis-carreras')} />
           )}
           <Button small variant={onlyMine ? 'primary' : 'secondary'} title="Solo de mi institución" onPress={() => setOnlyMine(!onlyMine)} />
+        </Row>
+      )}
+      {!!orgFilter && !onlyMine && (
+        <Row style={{ marginTop: 10 }} gap={6}>
+          <Badge text={`De: ${orgName(orgFilter) || 'universidad seleccionada'}`} tone="primary" icon="school-outline" />
+          <Button small variant="ghost" title="Ver todas" icon="close" onPress={() => router.setParams({ org: undefined })} />
         </Row>
       )}
       <Field label="Buscar" value={q} onChangeText={setQ} placeholder="sensores, impresión 3D, diseño…"

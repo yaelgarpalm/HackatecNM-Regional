@@ -114,6 +114,12 @@ Se usa **Azure Database for PostgreSQL – Flexible Server** (el código ya es c
 5. Al arrancar `uvicorn` las tablas se crean solas. Para cargar los datos de demo (borra todo lo que haya):
    `python seed.py --borrar-todo`
 
+### Mapa de universidades (OpenStreetMap)
+
+Cada organización guarda latitud y longitud. Se calculan solas con su ciudad y estado (Nominatim de
+OpenStreetMap) al registrarse o al cambiar de ciudad, y se pueden corregir tocando el mapa en "Mi organización".
+Para ubicar de una vez las organizaciones que ya existían: `python ubicar.py`.
+
 ### Si aparece "remaining connection slots are reserved…"
 
 El plan básico de Azure admite unas 35 conexiones para todo el equipo. Cada backend usa hasta 5, y cada

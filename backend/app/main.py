@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 
 import app.models  # noqa: F401  (registra los modelos en Base.metadata)
 from app.core.config import settings
-from app.core.database import Base, engine
+from app.core.database import Base, add_missing_columns, engine
 from app.routers import auth, challenges, insights, organizations, teams, users
 
 
@@ -22,6 +22,7 @@ from app.routers import auth, challenges, insights, organizations, teams, users
 async def lifespan(_: FastAPI):
     # En producción conviene usar Alembic; create_all basta para desarrollo y demo
     Base.metadata.create_all(bind=engine)
+    add_missing_columns()
     yield
 
 

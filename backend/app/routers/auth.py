@@ -11,6 +11,7 @@ from app.deps import get_current_user
 from app.models import Organization, User
 from app.models.enums import OrgType, Role
 from app.schemas import LoginIn, RefreshIn, Token, UserCreate, UserOut
+from app.services.geo import geocode
 from app.services.matching import normalize
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
@@ -54,6 +55,9 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
                                 f"Ya existe una organización registrada como '{name}'. Si es la tuya, pide a su "
                                 "responsable que te dé acceso; si es otra, agrega algo que la distinga (p. ej. la ciudad).")
         org = Organization(**{**data.organization.model_dump(), "name": name})
+        coords = geocode(org.city, org.state, name)
+        if coords:
+            org.latitude, org.longitude = coords
         db.add(org)
         db.flush()
         org_id = org.id

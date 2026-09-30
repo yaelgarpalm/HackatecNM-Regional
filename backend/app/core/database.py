@@ -35,6 +35,25 @@ class Base(DeclarativeBase):
     pass
 
 
+def add_missing_columns() -> None:
+    """Agrega columnas nuevas a tablas que ya existen (create_all solo crea tablas nuevas).
+
+    Mientras el proyecto no use Alembic, basta con listar aquí las columnas añadidas después.
+    """
+    from sqlalchemy import inspect, text
+
+    nuevas = {"organizations": {"latitude": "FLOAT", "longitude": "FLOAT"}}
+    insp = inspect(engine)
+    with engine.begin() as conn:
+        for tabla, cols in nuevas.items():
+            if not insp.has_table(tabla):
+                continue
+            existentes = {c["name"] for c in insp.get_columns(tabla)}
+            for col, tipo in cols.items():
+                if col not in existentes:
+                    conn.execute(text(f"ALTER TABLE {tabla} ADD COLUMN {col} {tipo}"))
+
+
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:

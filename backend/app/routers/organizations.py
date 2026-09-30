@@ -7,9 +7,10 @@ from app.deps import Pagination, get_current_user, require_roles
 from app.models import Capability, Career, Organization, UniversityCareer, User
 from app.models.enums import CapabilityType, OrgType, Role
 from app.schemas import (
-    CareerIn, CareerLinkOut, CareerOut, CapabilityCreate, CapabilityOut, OrganizationOut, OrganizationUpdate, Page,
+    NearbyOrganization, CareerIn, CareerLinkOut, CareerOut, CapabilityCreate, CapabilityOut, OrganizationOut, OrganizationUpdate, Page,
 )
 from app.services.careers import all_careers, same_career_name
+from app.services.geo import distance_km, geocode
 from app.services.common import get_or_404
 
 router = APIRouter(tags=["Organizaciones y capacidades"])
@@ -43,6 +44,31 @@ def list_organizations(
     return pag.apply(db, stmt.order_by(Organization.name))
 
 
+@router.get("/organizations/nearby", response_model=list[NearbyOrganization])
+def nearby_organizations(
+    lat: float | None = Query(None, ge=-90, le=90), lng: float | None = Query(None, ge=-180, le=180),
+    radius_km: float = Query(100, gt=0, le=5000), type: OrgType = OrgType.UNIVERSIDAD,
+    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    """Organizaciones (por defecto universidades) cercanas a un punto; sin lat/lng usa la ubicación
+    de la organización del usuario. Ordenadas de la más cercana a la más lejana."""
+    if lat is None or lng is None:
+        mine = db.get(Organization, user.organization_id) if user.organization_id else None
+        if not mine or mine.latitude is None:
+            raise HTTPException(422, "Tu organización todavía no tiene ubicación en el mapa")
+        lat, lng = mine.latitude, mine.longitude
+    out = []
+    for o in db.scalars(select(Organization).where(Organization.type == type, Organization.latitude.is_not(None))):
+        d = distance_km(lat, lng, o.latitude, o.longitude)
+        if d <= radius_km and o.id != user.organization_id:
+            caps = db.scalar(select(func.count(Capability.id)).where(Capability.organization_id == o.id)) or 0
+            careers = db.scalars(select(Career.name).join(UniversityCareer, UniversityCareer.career_id == Career.id)
+                                 .where(UniversityCareer.organization_id == o.id).order_by(Career.name)).all()
+            out.append(NearbyOrganization(**OrganizationOut.model_validate(o).model_dump(),
+                                          distance_km=round(d, 1), capabilities=caps, careers=list(careers)))
+    return sorted(out, key=lambda x: x.distance_km)
+
+
 @router.get("/organizations/{org_id}", response_model=OrganizationOut)
 def get_organization(org_id: int, db: Session = Depends(get_db)):
     return get_or_404(db, Organization, org_id, "Organización")
@@ -53,8 +79,30 @@ def update_organization(org_id: int, data: OrganizationUpdate,
                         user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     org = get_or_404(db, Organization, org_id, "Organización")
     _check_member(user, org_id)
-    for k, v in data.model_dump(exclude_unset=True).items():
+    changes = data.model_dump(exclude_unset=True)
+    moved = ("city" in changes and changes["city"] != org.city) or ("state" in changes and changes["state"] != org.state)
+    for k, v in changes.items():
         setattr(org, k, v)
+    # Si cambió la ciudad y no se fijó la ubicación a mano, se vuelve a ubicar en el mapa
+    if moved and "latitude" not in changes:
+        coords = geocode(org.city, org.state, org.name)
+        if coords:
+            org.latitude, org.longitude = coords
+    db.commit()
+    return org
+
+
+@router.post("/organizations/{org_id}/geocode", response_model=OrganizationOut)
+def locate_organization(org_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Ubica la organización en el mapa a partir de su ciudad y estado (OpenStreetMap)."""
+    org = get_or_404(db, Organization, org_id, "Organización")
+    _check_member(user, org_id)
+    if not (org.city or org.state):
+        raise HTTPException(422, "Primero escribe la ciudad y el estado de tu organización")
+    coords = geocode(org.city, org.state, org.name)
+    if not coords:
+        raise HTTPException(422, "No encontramos esa ciudad en el mapa. Revisa el nombre o toca el mapa para ubicarte.")
+    org.latitude, org.longitude = coords
     db.commit()
     return org
 

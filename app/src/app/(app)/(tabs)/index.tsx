@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 
 import { ChallengeCard } from '@/components/ChallengeCard';
+import { NearbyUniversities } from '@/components/NearbyUniversities';
 import { UniversityDashboard } from '@/components/UniversityDashboard';
 import { useApi } from '@/components/hooks';
 import {
@@ -148,6 +149,7 @@ function PublisherHome({ user }: { user: User }) {
           !items.length ? <Empty text="Todavía no publicas retos o problemáticas." /> :
           items.map((c) => <ChallengeCard key={c.id} ch={c} />)}
       </Section>
+      {!!user.organization_id && <NearbyUniversities orgId={user.organization_id} />}
     </Screen>
   );
 }

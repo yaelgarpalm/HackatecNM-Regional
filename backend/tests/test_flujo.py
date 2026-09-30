@@ -2,6 +2,7 @@
 import os
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test_vinculatec.db")
+os.environ["GEOCODING_ENABLED"] = "false"  # sin llamadas a OpenStreetMap en las pruebas
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -327,3 +328,31 @@ def test_universidad_registra_sus_carreras(client):
     assert c.delete(f"{API}/organizations/{u2}/careers/{cid}", headers=h2).status_code == 204
     assert c.get(f"{API}/organizations/{u2}/careers").json() == []
     assert "Ingeniería en Sistemas Energéticos" in c.get(f"{API}/catalogs").json()["carreras"]
+
+
+def test_mapa_universidades_cercanas(client):
+    c = client
+    emp = register(c, email="mapa@empresa.mx", full_name="Empresa Mapa", role="empresa",
+                   organization={"name": "Empresa del Mapa", "type": "empresa", "city": "Atlacomulco"})
+    cerca = register(c, email="mapa@tec-cerca.mx", full_name="Tec Cerca", role="universidad",
+                     organization={"name": "Tec Cercano", "type": "universidad"})
+    lejos = register(c, email="mapa@tec-lejos.mx", full_name="Tec Lejos", role="universidad",
+                     organization={"name": "Tec Lejano", "type": "universidad"})
+    h_emp, h_cerca, h_lejos = login(c, "mapa@empresa.mx"), login(c, "mapa@tec-cerca.mx"), login(c, "mapa@tec-lejos.mx")
+
+    # Sin ubicación todavía: se pide ubicar la empresa
+    assert c.get(f"{API}/organizations/nearby", headers=h_emp).status_code == 422
+
+    # Ubicaciones fijadas a mano en el mapa (Atlacomulco, San Felipe del Progreso y Monterrey)
+    c.patch(f"{API}/organizations/{emp['organization_id']}", headers=h_emp, json={"latitude": 19.797, "longitude": -99.876})
+    c.patch(f"{API}/organizations/{cerca['organization_id']}", headers=h_cerca, json={"latitude": 19.713, "longitude": -99.953})
+    c.patch(f"{API}/organizations/{lejos['organization_id']}", headers=h_lejos, json={"latitude": 25.686, "longitude": -100.316})
+    c.post(f"{API}/organizations/{cerca['organization_id']}/careers", headers=h_cerca, json={"name": "Ingeniería Industrial"})
+
+    r = c.get(f"{API}/organizations/nearby", headers=h_emp, params={"radius_km": 100}).json()
+    assert [o["name"] for o in r] == ["Tec Cercano"]
+    assert 10 < r[0]["distance_km"] < 15 and r[0]["careers"] == ["Ingeniería Industrial"]
+    todas = c.get(f"{API}/organizations/nearby", headers=h_emp, params={"radius_km": 2000}).json()
+    assert [o["name"] for o in todas][:2] == ["Tec Cercano", "Tec Lejano"]  # de la más cercana a la más lejana
+    # Nadie cambia la ubicación de otra organización
+    assert c.patch(f"{API}/organizations/{cerca['organization_id']}", headers=h_emp, json={"latitude": 0}).status_code == 403
