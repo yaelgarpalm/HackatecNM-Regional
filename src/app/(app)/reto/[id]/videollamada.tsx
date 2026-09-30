@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { WebView } from 'react-native-webview';
 
 import { colors } from '@/components/theme';
 import { Body, Button, Card, Muted, Screen, Section, Title } from '@/components/ui';
@@ -11,11 +13,49 @@ export default function Videollamada() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const room = `VinculaTec-Problematica-${String(id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const meetingUrl = `${JITSI_BASE_URL}${room}`;
+  const [started, setStarted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
-  const joinMeeting = async () => {
-    const supported = await Linking.canOpenURL(meetingUrl);
-    if (supported) await Linking.openURL(meetingUrl);
-  };
+  if (started) {
+    return (
+      <View style={styles.meeting}>
+        <Stack.Screen options={{ title: 'Videollamada', headerShown: true }} />
+        {loading && (
+          <View style={styles.loading} pointerEvents="none">
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Muted style={styles.loadingText}>Conectando con la sala…</Muted>
+          </View>
+        )}
+        {error && (
+          <View style={styles.errorOverlay}>
+            <Card>
+              <Title>No se pudo cargar la videollamada</Title>
+              <Muted style={{ marginTop: 6 }}>
+                Comprueba tu conexión a internet e intenta entrar nuevamente.
+              </Muted>
+              <Button title="Reintentar" icon="refresh" onPress={() => { setError(false); setLoading(true); }} style={{ marginTop: 12 }} />
+              <Button title="Volver" variant="secondary" onPress={() => setStarted(false)} style={{ marginTop: 8 }} />
+            </Card>
+          </View>
+        )}
+        <WebView
+          source={{ uri: meetingUrl }}
+          style={styles.webview}
+          javaScriptEnabled
+          domStorageEnabled
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          startInLoadingState
+          onLoadStart={() => { setLoading(true); setError(false); }}
+          onLoadEnd={() => setLoading(false)}
+          onError={() => { setLoading(false); setError(true); }}
+          originWhitelist={['https://*', 'http://*']}
+          allowsFullscreenVideo
+        />
+      </View>
+    );
+  }
 
   return (
     <Screen>
@@ -34,14 +74,14 @@ export default function Videollamada() {
       <Section title="Sala de reunión">
         <Card>
           <Body style={styles.label}>Sala asignada</Body>
-          <Text selectable style={styles.room}>{room}</Text>
+          <Body style={styles.room}>{room}</Body>
           <Muted style={{ marginTop: 8 }}>
-            La empresa y el alumno deben entrar a esta misma sala para comunicarse por audio y video.
+            La empresa y el alumno entran a la misma sala. La videollamada se abrirá dentro de la aplicación.
           </Muted>
           <Button
-            title="Entrar a la videollamada"
+            title="Iniciar videollamada"
             icon="videocam-outline"
-            onPress={joinMeeting}
+            onPress={() => { setError(false); setLoading(true); setStarted(true); }}
             style={{ marginTop: 14 }}
           />
         </Card>
@@ -51,7 +91,7 @@ export default function Videollamada() {
         <Card>
           <View style={styles.tip}>
             <Ionicons name="mic-outline" size={20} color={colors.primary} />
-            <Body style={styles.tipText}>Comprueba que el micrófono y la cámara tengan permiso.</Body>
+            <Body style={styles.tipText}>Permite el acceso al micrófono y la cámara cuando el dispositivo lo solicite.</Body>
           </View>
           <View style={styles.tip}>
             <Ionicons name="wifi-outline" size={20} color={colors.primary} />
@@ -68,6 +108,26 @@ export default function Videollamada() {
 }
 
 const styles = StyleSheet.create({
+  meeting: { flex: 1, backgroundColor: '#000' },
+  webview: { flex: 1, backgroundColor: '#000' },
+  loading: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+  },
+  loadingText: { marginTop: 6 },
+  errorOverlay: {
+    position: 'absolute',
+    zIndex: 3,
+    left: 16,
+    right: 16,
+    top: '25%',
+  },
   hero: { alignItems: 'center', paddingVertical: 12 },
   iconCircle: {
     width: 76,
