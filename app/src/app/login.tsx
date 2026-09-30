@@ -4,17 +4,8 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/components/theme';
-import { Button, Card, ErrorView, Field, Muted } from '@/components/ui';
+import { Button, Card, ErrorView, Field } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-
-const DEMO = [
-  ['Estudiante', 'ana@tessfp.edu.mx'],
-  ['Empresa', 'laura@laespiga.mx'],
-  ['Universidad', 'vinculacion@tessfp.edu.mx'],
-  ['Académico', 'dra.martinez@tessfp.edu.mx'],
-  ['Gobierno', 'innovacion@sanfelipe.gob.mx'],
-  ['Admin', 'admin@vinculatec.mx'],
-];
 
 export default function Login() {
   const { login } = useAuth();
@@ -56,16 +47,6 @@ export default function Login() {
               <Text style={{ color: colors.primary, fontWeight: '700' }}>¿No tienes cuenta? Regístrate</Text>
             </Pressable>
           </Link>
-        </Card>
-
-        <Card>
-          <Muted style={{ marginBottom: 8 }}>Cuentas de demostración (contraseña Demo12345):</Muted>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {DEMO.map(([role, mail]) => (
-              <Button key={mail} small variant="secondary" title={role}
-                onPress={() => { setEmail(mail); setPassword('Demo12345'); }} />
-            ))}
-          </View>
         </Card>
       </View>
     </KeyboardAvoidingView>
