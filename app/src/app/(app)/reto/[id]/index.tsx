@@ -115,7 +115,7 @@ export default function RetoDetalle() {
               {p.status === 'enviada' && (
                 <Button small variant="secondary" title="Retirar postulación" style={{ alignSelf: 'flex-start', marginTop: 8 }}
                   loading={withdraw.isPending}
-                  onPress={async () => { if (await confirm('¿Retirar la postulación?')) withdraw.mutate(p.id); }} />
+                  onPress={async () => { if (await confirm('¿Retirar la postulación?', 'La empresa ya no podrá revisarla. No podrás volver a postular con este equipo.', { confirmText: 'Retirar', danger: true })) withdraw.mutate(p.id); }} />
               )}
             </Card>
           ))}
@@ -143,11 +143,11 @@ export default function RetoDetalle() {
             {TRANSITIONS[ch.status].map((s) => (
               <Button key={s} small variant={s === 'cancelado' ? 'danger' : s === 'finalizado' ? 'success' : 'secondary'}
                 title={TRANSITION_TEXT[s]} loading={setStatus.isPending}
-                onPress={async () => { if (await confirm(`${TRANSITION_TEXT[s]}?`)) setStatus.mutate(s); }} />
+                onPress={async () => { if (await confirm(`¿${TRANSITION_TEXT[s]}?`, undefined, { confirmText: TRANSITION_TEXT[s], danger: s === 'cancelado' })) setStatus.mutate(s); }} />
             ))}
             {ch.status === 'borrador' && (
               <Button small variant="danger" title="Eliminar borrador" icon="trash-outline"
-                onPress={async () => { if (await confirm('¿Eliminar este borrador?')) remove.mutate(undefined); }} />
+                onPress={async () => { if (await confirm('¿Eliminar este borrador?', 'Se borrará por completo y no se puede deshacer.', { confirmText: 'Eliminar', danger: true, icon: 'trash-outline' })) remove.mutate(undefined); }} />
             )}
           </Row>
         </Section>

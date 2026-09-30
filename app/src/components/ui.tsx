@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps, ReactNode } from 'react';
 import {
-  ActivityIndicator, Alert, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
+  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
   TextInput, View, type StyleProp, type TextInputProps, type ViewStyle,
 } from 'react-native';
 
@@ -10,24 +10,8 @@ import { colors, MAX_WIDTH, radius } from './theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
-// ---------------------------------------------------------------- Diálogos multiplataforma
-/** Alert.alert no funciona en la web; esto usa window.alert/confirm allí. */
-export function notify(title: string, message?: string) {
-  if (Platform.OS === 'web') globalThis.alert?.(message ? `${title}\n\n${message}` : title);
-  else Alert.alert(title, message);
-}
-
-export function confirm(title: string, message?: string): Promise<boolean> {
-  if (Platform.OS === 'web') {
-    return Promise.resolve(globalThis.confirm?.(message ? `${title}\n\n${message}` : title) ?? false);
-  }
-  return new Promise((resolve) =>
-    Alert.alert(title, message, [
-      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Aceptar', onPress: () => resolve(true) },
-    ]),
-  );
-}
+// ---------------------------------------------------------------- Diálogos (ventanas propias de la app)
+export { confirm, notify } from './dialogs';
 
 // ---------------------------------------------------------------- Layout
 export function Screen({

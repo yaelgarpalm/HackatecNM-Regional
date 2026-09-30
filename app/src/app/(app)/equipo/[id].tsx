@@ -52,7 +52,8 @@ export default function EquipoDetalle() {
               <Button small variant="ghost" title={m.user_id === user.id ? 'Salir del equipo' : 'Quitar'} icon="person-remove-outline"
                 style={{ alignSelf: 'flex-start', marginTop: 6 }}
                 onPress={async () => {
-                  if (await confirm(m.user_id === user.id ? '¿Salir del equipo?' : `¿Quitar a ${m.user.full_name}?`)) {
+                  if (await confirm(m.user_id === user.id ? '¿Salir del equipo?' : `¿Quitar a ${m.user.full_name}?`, undefined,
+                    { confirmText: m.user_id === user.id ? 'Salir' : 'Quitar', danger: true })) {
                     if (m.user_id === user.id) leave.mutate(undefined);
                     else remove.mutate(m.user_id);
                   }

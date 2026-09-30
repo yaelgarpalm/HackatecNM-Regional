@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { DialogHost } from '@/components/dialogs';
 import { colors } from '@/components/theme';
 import { Loading } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
@@ -52,6 +53,7 @@ export default function RootLayout() {
         <AuthProvider>
           <StatusBar style="light" />
           <RootNavigator />
+          <DialogHost />
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

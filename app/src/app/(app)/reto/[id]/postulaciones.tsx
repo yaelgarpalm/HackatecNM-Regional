@@ -54,10 +54,10 @@ function ProposalCard({ p, canDecide }: { p: Proposal; canDecide: boolean }) {
           <Row>
             <Button title="Aceptar" variant="success" icon="checkmark" loading={decide.isPending}
               onPress={async () => {
-                if (await confirm('¿Aceptar esta propuesta?', 'La problemática pasará a "En progreso" y las demás postulaciones se rechazarán automáticamente.')) decide.mutate('aceptada');
+                if (await confirm('¿Aceptar esta propuesta?', 'La problemática pasará a "En progreso" y las demás postulaciones se rechazarán automáticamente.', { confirmText: 'Aceptar propuesta', icon: 'checkmark-circle-outline' })) decide.mutate('aceptada');
               }} />
             <Button title="Rechazar" variant="secondary" icon="close" loading={decide.isPending}
-              onPress={async () => { if (await confirm('¿Rechazar esta propuesta?')) decide.mutate('rechazada'); }} />
+              onPress={async () => { if (await confirm('¿Rechazar esta propuesta?', 'El equipo recibirá una notificación con tu comentario.', { confirmText: 'Rechazar', danger: true })) decide.mutate('rechazada'); }} />
           </Row>
         </>
       )}

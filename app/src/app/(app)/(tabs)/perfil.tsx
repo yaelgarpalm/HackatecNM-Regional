@@ -90,7 +90,7 @@ export default function Perfil() {
       </Section>
 
       <Button title="Cerrar sesión" variant="danger" icon="log-out-outline" style={{ marginTop: 20 }}
-        onPress={async () => { if (await confirm('¿Cerrar sesión?')) logout(); }} />
+        onPress={async () => { if (await confirm('¿Cerrar sesión?', 'Tendrás que volver a escribir tu correo y contraseña para entrar.', { confirmText: 'Cerrar sesión', danger: true, icon: 'log-out-outline' })) logout(); }} />
       <Muted style={{ textAlign: 'center', marginTop: 16, fontSize: 11 }}>Servidor: {API_URL}</Muted>
     </Screen>
   );

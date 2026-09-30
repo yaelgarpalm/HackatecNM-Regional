@@ -49,7 +49,7 @@ function CapacidadForm({ id, initial }: { id?: string; initial?: Capability }) {
           <Button title="Guardar" icon="save-outline" loading={save.isPending} disabled={f.name.trim().length < 2} onPress={() => save.mutate(undefined)} />
           {id && (
             <Button title="Eliminar" variant="danger" icon="trash-outline"
-              onPress={async () => { if (await confirm('¿Eliminar esta capacidad?')) remove.mutate(undefined); }} />
+              onPress={async () => { if (await confirm('¿Eliminar esta capacidad?', 'Dejará de aparecer en las sugerencias para las empresas.', { confirmText: 'Eliminar', danger: true, icon: 'trash-outline' })) remove.mutate(undefined); }} />
           )}
         </Row>
       </Card>

@@ -29,7 +29,7 @@ export function useAction<A, R = unknown>(
       if (opts?.successMessage) notify(opts.successMessage);
       opts?.onSuccess?.(r);
     },
-    onError: (e) => notify('No se pudo completar', e.message),
+    onError: (e) => notify('No se pudo completar', e.message, 'error'),
   });
 }
 
