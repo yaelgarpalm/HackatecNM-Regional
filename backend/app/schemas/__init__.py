@@ -4,7 +4,6 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.services.careers import exact_career
 from app.models.enums import (
     CapabilityType, ChallengeStatus, Confidentiality, IPModel, MilestoneStatus,
     Modality, OrgSize, OrgType, ProposalStatus, Role, TeamRole,
@@ -43,10 +42,10 @@ def _clean_list(v: list[str] | None) -> list[str]:
 
 
 def _official_career(v: str | None) -> str | None:
-    """Guarda el nombre oficial del catálogo ('contador' -> 'Licenciatura en Contaduría')."""
+    """Guarda la carrera tal como se escribió (solo sin espacios de más)."""
     if v is None or not v.strip():
         return None
-    return exact_career(v) or " ".join(v.split())
+    return " ".join(v.split())
 
 
 def _official_careers(v: list[str] | None) -> list[str] | None:

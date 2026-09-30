@@ -7,7 +7,9 @@ carreras del catálogo para decidir si coinciden.
 import re
 import unicodedata
 
-# Carreras del catálogo: todas las del TecNM y las licenciaturas más comunes del país
+# Conocimiento interno para COMPARAR carreras (p. ej. "Informático" ~ "Ingeniería Informática").
+# No se muestra como catálogo ni cambia lo que la gente escribe: el catálogo visible son solo las
+# carreras que registran las universidades (tabla careers).
 CARRERAS: list[str] = sorted([
     # --- Ingenierías (TecNM y otras universidades)
     "Ingeniería Aeronáutica",
@@ -192,31 +194,12 @@ def career_keys(text: str | None) -> set[str]:
     return set().union(*(keys for n, keys in found if n == longest))
 
 
-def exact_career(text: str | None) -> str | None:
-    """Carrera del catálogo cuyo nombre o sinónimo coincide con TODO el texto (no con una parte).
-
-    'Contador Público' -> 'Licenciatura en Contaduría'; 'Ing. en Sistemas Energéticos' -> None.
-    """
-    if not text:
-        return None
-    t = _norm(text)
-    keys = _FORMAS.get(t) or _FORMAS.get(_short(text)) or set()
-    return next(iter(keys)) if len(keys) == 1 else None
-
-
-def canonical_career(text: str | None) -> str | None:
-    """Nombre oficial del catálogo si el texto se refiere a una sola carrera; si no, None."""
-    keys = career_keys(text)
-    return next(iter(keys)) if len(keys) == 1 else None
-
-
 def all_careers(db) -> list[str]:
-    """Catálogo completo: carreras base + las que han creado las universidades."""
+    """Catálogo visible: solo las carreras que han registrado las universidades."""
     from sqlalchemy import select
 
     from app.models import Career
-    extra = db.scalars(select(Career.name)).all()
-    return sorted(set(CARRERAS) | set(extra), key=lambda c: _norm(c))
+    return sorted(db.scalars(select(Career.name)).all(), key=lambda c: _norm(c))
 
 
 def same_career_name(a: str, b: str) -> bool:

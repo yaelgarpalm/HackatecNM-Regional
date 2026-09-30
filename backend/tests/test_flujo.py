@@ -263,8 +263,6 @@ def test_problematica_solo_visible_para_carreras_requeridas(client):
     talent = {m["user"]["career"] for m in c.get(f"{API}/challenges/{ch['id']}/matches/talent", headers=h_emp).json()}
     assert "Licenciatura en Pedagogía" not in talent
 
-    # El catálogo ofrece las carreras para elegirlas en la app
-    assert "Licenciatura en Pedagogía" in c.get(f"{API}/catalogs").json()["carreras"]
 
 
 def test_registro_de_empresa(client):
@@ -303,9 +301,10 @@ def test_universidad_registra_sus_carreras(client):
                   organization={"name": "Tec B", "type": "universidad"})["organization_id"]
     h1, h2 = login(c, "vinc@tec-a.mx"), login(c, "vinc@tec-b.mx")
 
-    # Del catálogo, escrita de otra forma: se vincula a la existente, no se crea
-    r = c.post(f"{API}/organizations/{u1}/careers", headers=h1, json={"name": "contador público"}).json()
-    assert r["career"]["name"] == "Licenciatura en Contaduría" and r["created"] is False
+    # El catálogo empieza vacío: solo tiene lo que registran las universidades
+    assert "Licenciatura en Contaduría" not in c.get(f"{API}/catalogs").json()["carreras"]
+    r = c.post(f"{API}/organizations/{u1}/careers", headers=h1, json={"name": "  contador   público "}).json()
+    assert r["career"]["name"] == "contador público" and r["created"] is True  # se guarda tal cual (sin espacios de más)
 
     # Nueva: se crea y aparece en el catálogo para todos
     r = c.post(f"{API}/organizations/{u1}/careers", headers=h1, json={"name": "Ingeniería en Sistemas Energéticos"}).json()

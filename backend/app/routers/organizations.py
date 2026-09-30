@@ -9,7 +9,7 @@ from app.models.enums import CapabilityType, OrgType, Role
 from app.schemas import (
     CareerIn, CareerLinkOut, CareerOut, CapabilityCreate, CapabilityOut, OrganizationOut, OrganizationUpdate, Page,
 )
-from app.services.careers import all_careers, exact_career, same_career_name
+from app.services.careers import all_careers, same_career_name
 from app.services.common import get_or_404
 
 router = APIRouter(tags=["Organizaciones y capacidades"])
@@ -149,8 +149,8 @@ def _career_out(db: Session, c: Career) -> CareerOut:
 
 
 def _resolve_career(db: Session, typed: str) -> str | None:
-    """Nombre existente de la carrera escrita (catálogo o creada por otra universidad), o None si es nueva."""
-    return exact_career(typed) or next((c for c in all_careers(db) if same_career_name(c, typed)), None)
+    """Carrera ya registrada con el mismo nombre (sin importar acentos ni mayúsculas), o None si es nueva."""
+    return next((c for c in all_careers(db) if same_career_name(c, typed)), None)
 
 
 @router.get("/careers/resolve")
@@ -172,12 +172,11 @@ def list_university_careers(org_id: int, db: Session = Depends(get_db)):
 @router.post("/organizations/{org_id}/careers", response_model=CareerLinkOut, status_code=201)
 def add_university_career(org_id: int, data: CareerIn,
                           user: User = Depends(require_roles(Role.UNIVERSIDAD)), db: Session = Depends(get_db)):
-    """Agrega una carrera a la universidad. Si ya existe en la plataforma (aunque esté escrita distinto)
-    solo se vincula; si no existe, se crea y queda disponible para todos."""
+    """Agrega una carrera a la universidad. Si otra universidad ya registró ese mismo nombre solo se
+    vincula; si no existe, se guarda tal como se escribió y queda disponible para todos."""
     _university(db, org_id)
     _check_member(user, org_id)
     typed = " ".join(data.name.split())
-    # 1) ¿Es una del catálogo o ya la creó otra universidad? ("Contador Público" -> "Licenciatura en Contaduría")
     name = _resolve_career(db, typed)
     created = name is None
     name = name or typed
