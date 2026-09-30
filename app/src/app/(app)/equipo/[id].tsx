@@ -1,7 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
-import { useAction, useApi } from '@/components/hooks';
+import { Combobox } from '@/components/Combobox';
+import { useAction, useApi, useCatalogs } from '@/components/hooks';
 import {
   Badge, Body, Button, Card, ChipSelect, confirm, Empty, ErrorView, Field, H2, Loading, Muted, Row, Screen, Section, Tags,
 } from '@/components/ui';
@@ -15,9 +16,14 @@ export default function EquipoDetalle() {
   const user = useUser();
   const q = useApi<Team>(`/teams/${id}`);
   const [text, setText] = useState('');
-  const [search, setSearch] = useState('');
+  const [career, setCareer] = useState('');
   const [role, setRole] = useState<'estudiante' | 'academico'>('estudiante');
-  const results = useApi<Page<UserPublic>>(search ? '/users' : null, { q: search, role, size: 20 });
+  const carreras = useCatalogs().data?.carreras ?? [];
+  // La carrera solo filtra cuando es una del catálogo (mientras se escribe no se busca a medias)
+  const careerFilter = carreras.includes(career) ? career : '';
+  const query = text.trim();
+  const results = useApi<Page<UserPublic>>(careerFilter || query.length >= 2 ? '/users' : null,
+    { q: query || undefined, career: careerFilter || undefined, role, size: 30 });
 
   const add = useAction((b: { user_id: number; role: string }) => api.post(`/teams/${id}/members`, b), {
     successMessage: 'Integrante agregado', successDetail: 'Le avisamos con una notificación.',
@@ -67,12 +73,23 @@ export default function EquipoDetalle() {
 
       {manager && (
         <Section title="Invitar integrantes">
-          <Muted style={{ marginBottom: 8 }}>Busca por nombre, carrera o habilidad. Pueden ser de otras carreras o universidades.</Muted>
-          <ChipSelect options={['estudiante', 'academico'] as const} value={role} onChange={(v) => v && setRole(v)} />
-          <Field label="Buscar" value={text} onChangeText={setText} onSubmitEditing={() => setSearch(text)} placeholder="Diseño, Industrial, Marketing…" />
-          <Button small title="Buscar" icon="search" onPress={() => setSearch(text)} style={{ alignSelf: 'flex-start', marginBottom: 10, marginTop: -4 }} />
+          <Muted style={{ marginBottom: 8 }}>
+            Elige una carrera o escribe un nombre o habilidad. Pueden ser de otras carreras o universidades.
+          </Muted>
+          <ChipSelect label="¿A quién buscas?" options={['estudiante', 'academico'] as const} value={role}
+            onChange={(v) => v && setRole(v)} />
+          <Combobox label="Carrera" value={career} onChange={setCareer} options={carreras}
+            placeholder="Escribe una carrera, p. ej. contaduría" />
+          <Field label="Nombre o habilidad (opcional)" value={text} onChangeText={setText} placeholder="Ej. López, Python, Diseño" />
           {results.isLoading && <Loading />}
-          {results.data && !results.data.items.length && <Empty text="Sin resultados." />}
+          {!careerFilter && query.length < 2 && (
+            <Muted style={{ marginBottom: 8 }}>Elige una carrera o escribe al menos 2 letras para ver resultados.</Muted>
+          )}
+          {!results.isLoading && results.data && !results.data.items.filter((u) => !inTeam.has(u.id)).length && (
+            <Empty icon="person-outline" text={careerFilter && !query
+              ? `No hay ${role === 'estudiante' ? 'estudiantes' : 'académicos'} de ${careerFilter} registrados todavía. Pídele a tu compañero que cree su cuenta en VinculaTec con esa carrera.`
+              : 'No encontramos a nadie con esos datos. Revisa el nombre o prueba con otra carrera.'} />
+          )}
           {results.data?.items.filter((u) => !inTeam.has(u.id)).map((u) => (
             <Card key={u.id}>
               <Row style={{ justifyContent: 'space-between' }}>

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import String, cast, or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -7,7 +7,9 @@ from app.deps import Pagination, get_current_user
 from app.models import Notification, Review, User
 from app.models.enums import Role
 from app.schemas import NotificationOut, Page, ReviewOut, UserOut, UserPublic, UserUpdate
+from app.services.careers import career_matches
 from app.services.common import get_or_404
+from app.services.matching import normalize
 
 router = APIRouter(prefix="/users", tags=["Usuarios"])
 
@@ -31,21 +33,25 @@ def search_talent(
     _: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Directorio de talento: estudiantes y académicos por carrera y habilidades."""
+    """Directorio de talento: estudiantes y académicos por carrera y habilidades.
+
+    La carrera se compara con el catálogo ("Contaduría" encuentra "Contador Público") y el texto
+    libre no distingue acentos ni mayúsculas ("lopez" encuentra "López").
+    """
     stmt = select(User).where(User.is_active.is_(True), User.role != Role.ADMIN)
     if role:
         stmt = stmt.where(User.role == role)
-    if career:
-        stmt = stmt.where(User.career.ilike(f"%{career}%"))
     if organization_id:
         stmt = stmt.where(User.organization_id == organization_id)
+    users = list(db.scalars(stmt.order_by(User.rating_avg.desc(), User.id)))
+    if career:
+        users = [u for u in users if career_matches(u.career, [career])]
     if q:
-        like = f"%{q}%"
-        # skills es JSON: se compara su representación en texto (portable SQLite/PostgreSQL)
-        stmt = stmt.where(or_(User.full_name.ilike(like), User.career.ilike(like),
-                              cast(User.skills, String).ilike(like)))
-    stmt = stmt.order_by(User.rating_avg.desc(), User.id)
-    return pag.apply(db, stmt)
+        words = normalize(q).split()
+        def texto(u: User) -> str:
+            return normalize(" ".join([u.full_name, u.career or "", *(u.skills or [])]))
+        users = [u for u in users if all(w in texto(u) for w in words)]
+    return pag.apply_list(users)
 
 
 @router.get("/me/notifications", response_model=Page[NotificationOut])
