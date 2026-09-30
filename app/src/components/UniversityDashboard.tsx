@@ -3,10 +3,11 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { HBars, Kpi, MonthlyColumns, StackedBar, VIZ, type Segment } from '@/components/charts';
 import { useApi } from '@/components/hooks';
 import { colors, radius } from '@/components/theme';
 import {
-  Badge, Button, Card, Empty, ErrorView, H2, Loading, Muted, Row, Screen, Section, Stat, Title, type IconName,
+  Badge, Button, Card, Empty, ErrorView, H2, Loading, Muted, Row, Screen, Section, Title, type IconName,
 } from '@/components/ui';
 import { shortDate } from '@/lib/format';
 import type { User } from '@/lib/types';
@@ -19,20 +20,23 @@ type Proyecto = {
   next_milestone: { title: string; due_date: string | null; status: string } | null; created_at: string;
 };
 type Dashboard = {
+  kpis: { tasa_aceptacion: number | null; participacion: number | null; postulaciones_mes: number; postulaciones_mes_anterior: number };
+  tendencia: { mes: string; postulaciones: number; aceptadas: number }[];
+  carreras: { carrera: string; alumnos: number }[];
   resumen: { estudiantes: number; estudiantes_en_proyectos: number; empresas_atendidas: number };
   cumplimiento: Hitos & { porcentaje: number | null; proyectos_al_dia: number; proyectos_con_atraso: number; proyectos_sin_hitos: number };
   proyectos_por_estado: Record<string, number>;
   proyectos: Proyecto[];
 };
 
-/** Nombre, color e ícono de cada estado de proyecto. */
-const ESTADOS: Record<string, { label: string; color: string; soft: string; icon: IconName }> = {
-  en_curso: { label: 'En curso', color: colors.primary, soft: colors.primarySoft, icon: 'construct-outline' },
-  postulado: { label: 'Postulados', color: colors.accent, soft: colors.accentSoft, icon: 'paper-plane-outline' },
-  finalizado: { label: 'Finalizados', color: colors.success, soft: colors.successSoft, icon: 'checkmark-done-outline' },
-  no_seleccionado: { label: 'No seleccionados', color: '#8A96A3', soft: '#EEF1F4', icon: 'close-circle-outline' },
-  retirado: { label: 'Retirados', color: '#B0B8C1', soft: '#F3F5F7', icon: 'return-down-back-outline' },
-  cancelado: { label: 'Cancelados', color: colors.danger, soft: colors.dangerSoft, icon: 'ban-outline' },
+/** Estados de proyecto: colores categóricos validados + gris neutro para lo que ya no sigue. */
+const ESTADOS: Record<string, { label: string; color: string; icon: IconName }> = {
+  en_curso: { label: 'En curso', color: VIZ.blue, icon: 'construct-outline' },
+  postulado: { label: 'Postulados', color: VIZ.orange, icon: 'paper-plane-outline' },
+  finalizado: { label: 'Finalizados', color: VIZ.aqua, icon: 'checkmark-done-outline' },
+  no_seleccionado: { label: 'No seleccionados', color: VIZ.neutral, icon: 'close-circle-outline' },
+  retirado: { label: 'Retirados', color: VIZ.neutral, icon: 'return-down-back-outline' },
+  cancelado: { label: 'Cancelados', color: VIZ.neutral, icon: 'ban-outline' },
 };
 /** Semáforo de cumplimiento de cada proyecto. */
 const CUMPLIMIENTO: Record<string, { label: string; tone: 'success' | 'danger' | 'warning' | 'neutral' | 'primary'; icon: IconName }> = {
@@ -50,97 +54,19 @@ const FILTRO_LABEL: Record<string, string> = {
   todos: 'Todos', en_curso: 'En curso', postulado: 'Postulados', finalizado: 'Finalizados', no_seleccionado: 'No seleccionados',
 };
 
-const pct = (v: number) => `${Math.round(v * 100)}%`;
+const pct = (v: number | null) => (v == null ? '—' : `${Math.round(v * 100)}%`);
 const today = new Date().toISOString().slice(0, 10);
+const shortCareer = (c: string) => c.replace(/^(Ingeniería|Licenciatura)( en)? /, '');
 
-function ProgressBar({ value, color = colors.primary, height = 10 }: { value: number; color?: string; height?: number }) {
+function ChartCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <View style={{ height, backgroundColor: colors.primarySoft, borderRadius: 999, overflow: 'hidden', flex: 1 }}>
-      <View style={{ width: `${Math.round(value * 100)}%`, height, backgroundColor: color, borderRadius: 999 }} />
+    <View style={{ flexGrow: 1, flexBasis: 320, backgroundColor: colors.card, borderRadius: radius.lg, padding: 16,
+      borderWidth: 1, borderColor: colors.border }}>
+      <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>{title}</Text>
+      {!!subtitle && <Muted style={{ marginTop: 2, marginBottom: 12 }}>{subtitle}</Muted>}
+      {!subtitle && <View style={{ height: 12 }} />}
+      {children}
     </View>
-  );
-}
-
-function Pill({ icon, value, text, color, soft }: { icon: IconName; value: number; text: string; color: string; soft: string }) {
-  return (
-    <View style={{ flexGrow: 1, flexBasis: 120, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10,
-      borderRadius: radius.md, backgroundColor: soft }}>
-      <Ionicons name={icon} size={20} color={color} />
-      <View>
-        <Text style={{ fontSize: 20, fontWeight: '800', color }}>{value}</Text>
-        <Text style={{ fontSize: 12, color: colors.text }}>{text}</Text>
-      </View>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------- Estado de cumplimiento
-function Cumplimiento({ c }: { c: Dashboard['cumplimiento'] }) {
-  const color = c.porcentaje == null ? colors.muted : c.porcentaje >= 0.7 ? colors.success : c.porcentaje >= 0.4 ? colors.accent : colors.danger;
-  return (
-    <Section title="Estado de cumplimiento">
-      <Card>
-        {c.porcentaje == null ? (
-          <Muted>Todavía no hay hitos en los proyectos en curso. El cumplimiento se calcula con los hitos que aprueban las empresas.</Muted>
-        ) : (
-          <>
-            <Row style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <View>
-                <Text style={{ fontSize: 40, fontWeight: '800', color }}>{pct(c.porcentaje)}</Text>
-                <Muted>de los hitos aprobados por las empresas ({c.aprobados} de {c.total})</Muted>
-              </View>
-            </Row>
-            <View style={{ flexDirection: 'row', marginTop: 10 }}><ProgressBar value={c.porcentaje} color={color} height={14} /></View>
-          </>
-        )}
-
-        <Muted style={{ fontWeight: '700', marginTop: 16, marginBottom: 8 }}>Proyectos en curso</Muted>
-        <Row gap={8}>
-          <Pill icon="checkmark-circle" value={c.proyectos_al_dia} text="Al día" color={colors.success} soft={colors.successSoft} />
-          <Pill icon="alert-circle" value={c.proyectos_con_atraso} text="Con atraso" color={colors.danger} soft={colors.dangerSoft} />
-          <Pill icon="time-outline" value={c.proyectos_sin_hitos} text="Sin hitos" color={colors.warning} soft={colors.warningSoft} />
-        </Row>
-
-        <Muted style={{ fontWeight: '700', marginTop: 16, marginBottom: 8 }}>Hitos</Muted>
-        <Row gap={6}>
-          <Badge text={`${c.aprobados} aprobados`} tone="success" icon="checkmark" />
-          <Badge text={`${c.en_revision} en revisión`} tone="primary" icon="eye-outline" />
-          <Badge text={`${c.pendientes} pendientes`} tone="neutral" icon="ellipse-outline" />
-          <Badge text={`${c.con_cambios} con cambios`} tone="warning" icon="create-outline" />
-          <Badge text={`${c.vencidos} vencidos`} tone="danger" icon="alert-circle-outline" />
-        </Row>
-      </Card>
-    </Section>
-  );
-}
-
-// ---------------------------------------------------------------- Estado de los proyectos
-function EstadoProyectos({ data }: { data: Record<string, number> }) {
-  const entries = Object.entries(data).filter(([, v]) => v > 0);
-  const total = entries.reduce((a, [, v]) => a + v, 0);
-  return (
-    <Section title="Estado de los proyectos">
-      <Card>
-        {!total ? <Muted>Tus alumnos todavía no se postulan a ninguna problemática.</Muted> : (
-          <>
-            <Row style={{ alignItems: 'baseline' }} gap={6}>
-              <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>{total}</Text>
-              <Muted>postulaciones y proyectos de tus alumnos</Muted>
-            </Row>
-            {/* Barra apilada: cada color es un estado */}
-            <View style={{ flexDirection: 'row', height: 16, borderRadius: 999, overflow: 'hidden', marginVertical: 12 }}>
-              {entries.map(([k, v]) => <View key={k} style={{ flex: v, backgroundColor: ESTADOS[k].color }} />)}
-            </View>
-            <Row gap={8}>
-              {/* Los estados poco comunes (retirados, cancelados) solo aparecen si hay alguno */}
-              {Object.entries(data).filter(([k, v]) => v > 0 || !['retirado', 'cancelado'].includes(k)).map(([k, v]) => (
-                <Pill key={k} icon={ESTADOS[k].icon} value={v} text={ESTADOS[k].label} color={ESTADOS[k].color} soft={ESTADOS[k].soft} />
-              ))}
-            </Row>
-          </>
-        )}
-      </Card>
-    </Section>
   );
 }
 
@@ -167,7 +93,7 @@ function ProyectoCard({ p }: { p: Proyecto }) {
       <Row gap={6} style={{ marginTop: 8 }}>
         {p.students.map((a) => (
           <Badge key={a.id} tone="neutral" icon="school-outline"
-            text={`${a.full_name}${a.career ? ` · ${a.career.replace(/^(Ingeniería|Licenciatura)( en)? /, '')}` : ''}`} />
+            text={`${a.full_name}${a.career ? ` · ${shortCareer(a.career)}` : ''}`} />
         ))}
       </Row>
 
@@ -176,7 +102,10 @@ function ProyectoCard({ p }: { p: Proyecto }) {
           {m.total ? (
             <>
               <Row style={{ flexWrap: 'nowrap' }} gap={10}>
-                <ProgressBar value={p.progress} color={p.compliance === 'con_atraso' ? colors.danger : colors.success} />
+                <View style={{ height: 10, backgroundColor: VIZ.track, borderRadius: 999, overflow: 'hidden', flex: 1 }}>
+                  <View style={{ width: `${Math.round(p.progress * 100)}%`, height: 10, borderRadius: 999,
+                    backgroundColor: p.compliance === 'con_atraso' ? VIZ.critical : VIZ.good }} />
+                </View>
                 <Text style={{ fontWeight: '700', color: colors.text }}>{m.aprobados}/{m.total} hitos</Text>
               </Row>
               {next && (
@@ -203,33 +132,106 @@ export function UniversityDashboard({ user }: { user: User }) {
   const d = q.data;
   const proyectos = (d?.proyectos ?? []).filter((p) => filtro === 'todos' || p.state === filtro);
 
+  const c = d?.cumplimiento;
+  const k = d?.kpis;
+  const deltaMes = k ? k.postulaciones_mes - k.postulaciones_mes_anterior : 0;
+  const enCurso = (d?.proyectos ?? []).filter((p) => p.state === 'en_curso');
+
+  const hitosSeg: Segment[] = c ? [
+    { key: 'aprobados', label: 'Aprobados', value: c.aprobados, color: VIZ.good, icon: 'checkmark-circle' },
+    { key: 'revision', label: 'En revisión', value: c.en_revision, color: VIZ.blue, icon: 'eye' },
+    { key: 'pendientes', label: 'Pendientes', value: c.pendientes, color: VIZ.neutral, icon: 'ellipse-outline' },
+    { key: 'cambios', label: 'Con cambios', value: c.con_cambios, color: VIZ.serious, icon: 'create' },
+  ] : [];
+  const estadosSeg: Segment[] = d ? Object.entries(d.proyectos_por_estado)
+    .filter(([key, v]) => v > 0 || !['retirado', 'cancelado'].includes(key))
+    .map(([key, v]) => ({ key, label: ESTADOS[key].label, value: v, color: ESTADOS[key].color, icon: ESTADOS[key].icon })) : [];
+
   return (
     <Screen onRefresh={q.refetch} refreshing={q.isRefetching}>
       <Title>Hola, {user.full_name.split(' ')[0]}</Title>
       <Muted>Tablero de vinculación: cumplimiento y proyectos de los alumnos de tu institución.</Muted>
 
-      {q.isLoading ? <Loading /> : q.error || !d ? <ErrorView error={q.error} onRetry={q.refetch} /> : (
+      {q.isLoading ? <Loading /> : q.error || !d || !c || !k ? <ErrorView error={q.error} onRetry={q.refetch} /> : (
         <>
-          <Row style={{ marginTop: 16 }} gap={10}>
-            <Stat value={d.resumen.estudiantes} text="Alumnos registrados" icon="school-outline" />
-            <Stat value={d.resumen.estudiantes_en_proyectos} text="Alumnos en proyectos" icon="people-outline" />
-            <Stat value={d.proyectos_por_estado.en_curso} text="Proyectos en curso" icon="construct-outline" />
-            <Stat value={d.resumen.empresas_atendidas} text="Empresas atendidas" icon="business-outline" />
-          </Row>
+          {/* ---------- KPIs ---------- */}
+          <Section title="Indicadores clave">
+            <Row gap={10}>
+              <Kpi label="Cumplimiento de hitos" icon="speedometer-outline" value={pct(c.porcentaje)} meter={c.porcentaje}
+                tone={c.porcentaje != null && c.porcentaje < 0.5 ? 'critical' : 'good'}
+                hint={c.total ? `${c.aprobados} de ${c.total} hitos aprobados` : 'Aún no hay hitos'} />
+              <Kpi label="Tasa de aceptación" icon="checkmark-done-outline" value={pct(k.tasa_aceptacion)} meter={k.tasa_aceptacion}
+                hint="Postulaciones aceptadas de las ya respondidas" />
+              <Kpi label="Participación de alumnos" icon="people-outline" value={pct(k.participacion)} meter={k.participacion}
+                hint={`${d.resumen.estudiantes_en_proyectos} de ${d.resumen.estudiantes} alumnos en proyectos`} />
+              <Kpi label="Postulaciones este mes" icon="paper-plane-outline" value={String(k.postulaciones_mes)}
+                delta={{ value: deltaMes, text: deltaMes === 0 ? 'igual que el mes pasado'
+                  : `${deltaMes > 0 ? '+' : ''}${deltaMes} vs. mes pasado` }} />
+              <Kpi label="Proyectos en curso" icon="construct-outline" value={String(d.proyectos_por_estado.en_curso)}
+                hint={`con ${d.resumen.empresas_atendidas} empresa(s) atendida(s)`} />
+              <Kpi label="Hitos vencidos" icon={c.vencidos ? 'alert-circle' : 'checkmark-circle'} value={String(c.vencidos)}
+                tone={c.vencidos ? 'critical' : 'good'}
+                hint={c.vencidos ? `${c.proyectos_con_atraso} proyecto(s) con atraso` : 'Ningún proyecto con atraso'} />
+            </Row>
+          </Section>
 
-          <Cumplimiento c={d.cumplimiento} />
-          <EstadoProyectos data={d.proyectos_por_estado} />
+          {/* ---------- Gráficas ---------- */}
+          <Section title="Estado de cumplimiento">
+            <Row gap={10} style={{ alignItems: 'stretch' }}>
+              <ChartCard title="Hitos por estado" subtitle="Toca o pasa el mouse sobre la barra para ver el detalle">
+                {c.total ? <StackedBar segments={hitosSeg} unit=" hitos" />
+                  : <Muted>Cuando las empresas definan hitos en los proyectos, aquí verás su avance.</Muted>}
+              </ChartCard>
+              <ChartCard title="Avance por proyecto en curso" subtitle="Hitos aprobados de cada proyecto">
+                {!enCurso.length ? <Muted>No hay proyectos en curso.</Muted> : (
+                  <HBars max={1} onPress={(key) => {
+                    const p = enCurso.find((x) => String(x.proposal_id) === key);
+                    if (p) router.push(`/reto/${p.challenge_id}`);
+                  }} rows={enCurso.map((p) => ({
+                    key: String(p.proposal_id), label: p.challenge_title, value: p.progress,
+                    display: p.milestones.total ? `${p.milestones.aprobados}/${p.milestones.total}` : 'sin hitos',
+                    color: p.compliance === 'con_atraso' ? VIZ.critical : VIZ.blue,
+                    icon: p.compliance === 'con_atraso' ? 'alert-circle' : p.compliance === 'al_dia' ? 'checkmark-circle' : 'time-outline',
+                    note: p.compliance === 'con_atraso' ? `${p.milestones.vencidos} hito(s) vencido(s) · ${p.organization_name}` : p.organization_name ?? undefined,
+                  }))} />
+                )}
+              </ChartCard>
+            </Row>
+          </Section>
 
+          <Section title="Estado de los proyectos">
+            <Row gap={10} style={{ alignItems: 'stretch' }}>
+              <ChartCard title="Proyectos por estado" subtitle="Todas las postulaciones y proyectos de tus alumnos">
+                {d.proyectos.length ? <StackedBar segments={estadosSeg} unit=" proyectos" />
+                  : <Muted>Tus alumnos todavía no se postulan a ninguna problemática.</Muted>}
+              </ChartCard>
+              <ChartCard title="Postulaciones por mes" subtitle="Últimos 6 meses">
+                <MonthlyColumns data={d.tendencia} />
+              </ChartCard>
+            </Row>
+          </Section>
+
+          <Section title="Alumnos por carrera">
+            <ChartCard title="¿Qué carreras participan más?" subtitle="Alumnos postulados o en proyectos, por carrera">
+              {d.carreras.length ? (
+                <HBars rows={d.carreras.map((x) => ({
+                  key: x.carrera, label: shortCareer(x.carrera), value: x.alumnos, display: `${x.alumnos} alumno(s)`,
+                }))} />
+              ) : <Muted>Aún no hay alumnos participando.</Muted>}
+            </ChartCard>
+          </Section>
+
+          {/* ---------- Lista ---------- */}
           <Section title="Proyectos de tus alumnos">
             <Row gap={6} style={{ marginBottom: 12 }}>
-              {FILTROS.map((k) => {
-                const on = filtro === k;
-                const n = k === 'todos' ? d.proyectos.length : d.proyectos_por_estado[k] ?? 0;
+              {FILTROS.map((key) => {
+                const on = filtro === key;
+                const n = key === 'todos' ? d.proyectos.length : d.proyectos_por_estado[key] ?? 0;
                 return (
-                  <Pressable key={k} onPress={() => setFiltro(k)}
+                  <Pressable key={key} onPress={() => setFiltro(key)}
                     style={{ borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1,
                       borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary : colors.card }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: on ? '#fff' : colors.text }}>{FILTRO_LABEL[k]} ({n})</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: on ? '#fff' : colors.text }}>{FILTRO_LABEL[key]} ({n})</Text>
                   </Pressable>
                 );
               })}
@@ -243,11 +245,13 @@ export function UniversityDashboard({ user }: { user: User }) {
       )}
 
       <Section title="Accesos rápidos">
-        <Row>
-          <Button title="Publicar capacidad" icon="add-circle-outline" onPress={() => router.push('/capacidad')} />
-          <Button title="Ver problemáticas abiertas" variant="secondary" onPress={() => router.push('/retos')} />
-          <Button title="Indicadores globales" variant="secondary" onPress={() => router.push('/indicadores')} />
-        </Row>
+        <Card>
+          <Row>
+            <Button title="Publicar capacidad" icon="add-circle-outline" onPress={() => router.push('/capacidad')} />
+            <Button title="Ver problemáticas abiertas" variant="secondary" onPress={() => router.push('/retos')} />
+            <Button title="Indicadores globales" variant="secondary" onPress={() => router.push('/indicadores')} />
+          </Row>
+        </Card>
       </Section>
     </Screen>
   );

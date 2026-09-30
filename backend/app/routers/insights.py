@@ -156,11 +156,46 @@ def university_dashboard(org_id: int, user: User = Depends(get_current_user), db
             "next_milestone": proximo, "created_at": p.created_at,
         })
 
+    total_alumnos = _count(db, select(func.count()).select_from(alumnos.subquery()))
+    en_proyectos = {a["id"] for pr in proyectos if pr["state"] in ("en_curso", "finalizado") for a in pr["students"]}
+
+    # Tendencia: postulaciones de los últimos 6 meses (y cuántas terminaron aceptadas)
+    meses = []
+    y, m = hoy.year, hoy.month
+    for _ in range(6):
+        meses.insert(0, (y, m))
+        y, m = (y, m - 1) if m > 1 else (y - 1, 12)
+    tendencia = [{"mes": f"{yy}-{mm:02d}", "postulaciones": 0, "aceptadas": 0} for yy, mm in meses]
+    idx = {t["mes"]: t for t in tendencia}
+    for p in propuestas:
+        t = idx.get(f"{p.created_at.year}-{p.created_at.month:02d}")
+        if t:
+            t["postulaciones"] += 1
+            t["aceptadas"] += p.status == ProposalStatus.ACEPTADA
+
+    # Alumnos por carrera que participan (postulados, en curso o finalizados)
+    por_carrera: dict[str, set[int]] = {}
+    for pr in proyectos:
+        if pr["state"] in ("en_curso", "finalizado", "postulado"):
+            for a in pr["students"]:
+                por_carrera.setdefault(a["career"] or "Sin carrera", set()).add(a["id"])
+    carreras = sorted(({"carrera": k, "alumnos": len(v)} for k, v in por_carrera.items()),
+                      key=lambda x: (-x["alumnos"], x["carrera"]))
+
+    decididas = sum(1 for p in propuestas if p.status in (ProposalStatus.ACEPTADA, ProposalStatus.RECHAZADA))
+    aceptadas = sum(1 for p in propuestas if p.status == ProposalStatus.ACEPTADA)
     return {
+        "kpis": {
+            "tasa_aceptacion": round(aceptadas / decididas, 3) if decididas else None,
+            "participacion": round(len(en_proyectos) / total_alumnos, 3) if total_alumnos else None,
+            "postulaciones_mes": tendencia[-1]["postulaciones"],
+            "postulaciones_mes_anterior": tendencia[-2]["postulaciones"],
+        },
+        "tendencia": tendencia,
+        "carreras": carreras,
         "resumen": {
-            "estudiantes": _count(db, select(func.count()).select_from(alumnos.subquery())),
-            "estudiantes_en_proyectos": len({a["id"] for pr in proyectos if pr["state"] in ("en_curso", "finalizado")
-                                             for a in pr["students"]}),
+            "estudiantes": total_alumnos,
+            "estudiantes_en_proyectos": len(en_proyectos),
             "empresas_atendidas": len({pr["organization_name"] for pr in proyectos
                                        if pr["state"] in ("en_curso", "finalizado")}),
         },

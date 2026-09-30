@@ -154,6 +154,9 @@ def test_flujo_completo(client):
     assert {a["full_name"] for a in p["students"]} == {"Ana López", "Beto Ruiz"}
     assert p["milestones"]["aprobados"] == 1 and p["milestones"]["vencidos"] == 1 and p["progress"] == 0.5
     assert d["cumplimiento"]["porcentaje"] == 0.5 and d["proyectos_por_estado"]["en_curso"] == 1
+    assert d["kpis"]["tasa_aceptacion"] == 1.0 and d["kpis"]["participacion"] == 1.0
+    assert len(d["tendencia"]) == 6 and d["tendencia"][-1]["aceptadas"] == 1
+    assert {x["carrera"] for x in d["carreras"]} == {"Ingeniería en Sistemas Computacionales", "Ingeniería Industrial"}
     assert c.get(f"{API}/stats/university/{uni_id}/dashboard", headers=h_emp).status_code == 403
 
     # --- Participantes y postulaciones propias
