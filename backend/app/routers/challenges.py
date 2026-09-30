@@ -369,6 +369,27 @@ def match_talent(ch_id: int, role: Role = Query(Role.ESTUDIANTE), limit: int = Q
 
 
 # ================================================================ Videollamada
+VIDEOCALL_STARTED = "[videocall:started]"
+VIDEOCALL_ENDED = "[videocall:ended]"
+
+
+def _videocall_active(db: Session, ch_id: int) -> bool:
+    latest = db.scalar(select(Message).where(
+        Message.challenge_id == ch_id,
+        Message.body.in_((VIDEOCALL_STARTED, VIDEOCALL_ENDED)),
+    ).order_by(Message.id.desc()).limit(1))
+    return bool(latest and latest.body == VIDEOCALL_STARTED)
+
+
+def _company_videocall_owner(db: Session, ch_id: int, user: User) -> Challenge:
+    if user.role != Role.EMPRESA:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo la empresa puede iniciar o finalizar la videollamada")
+    ch = _owned(db, ch_id, user)
+    if ch.status != ChallengeStatus.EN_PROGRESO or accepted_team_id(db, ch) is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "La videollamada requiere un proyecto activo con equipo aceptado")
+    return ch
+
+
 @router.get("/challenges/{ch_id}/videocall")
 def videocall_room(ch_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Sala de videollamada (Jitsi Meet) de la problemática, solo para la empresa y el equipo aceptado.
@@ -378,7 +399,38 @@ def videocall_room(ch_id: int, user: User = Depends(get_current_user), db: Sessi
     ch = _participant(db, ch_id, user)
     firma = hmac.new(settings.SECRET_KEY.encode(), f"videocall:{ch.id}".encode(), hashlib.sha256).hexdigest()[:16]
     room = f"VinculaTec-{ch.id}-{firma}"
-    return {"room": room, "url": f"https://meet.jit.si/{room}", "display_name": user.full_name}
+    return {"room": room, "url": f"https://meet.jit.si/{room}", "display_name": user.full_name,
+            "active": _videocall_active(db, ch.id)}
+
+
+@router.post("/challenges/{ch_id}/videocall/start")
+def start_videocall(ch_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ch = _company_videocall_owner(db, ch_id, user)
+    if _videocall_active(db, ch.id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "La videollamada ya está iniciada")
+    db.add(Message(challenge_id=ch.id, author_id=user.id, body=VIDEOCALL_STARTED))
+    team_id = accepted_team_id(db, ch)
+    for uid in _team_user_ids(db, team_id):
+        notify(db, uid, f"La empresa inició una videollamada: {ch.title}",
+               "Entra al proyecto para unirte a la sala.", f"/retos/{ch.id}/videollamada")
+    db.commit()
+    firma = hmac.new(settings.SECRET_KEY.encode(), f"videocall:{ch.id}".encode(), hashlib.sha256).hexdigest()[:16]
+    room = f"VinculaTec-{ch.id}-{firma}"
+    return {"room": room, "url": f"https://meet.jit.si/{room}", "display_name": user.full_name, "active": True}
+
+
+@router.post("/challenges/{ch_id}/videocall/end")
+def end_videocall(ch_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ch = _company_videocall_owner(db, ch_id, user)
+    if not _videocall_active(db, ch.id):
+        return {"active": False}
+    db.add(Message(challenge_id=ch.id, author_id=user.id, body=VIDEOCALL_ENDED))
+    team_id = accepted_team_id(db, ch)
+    for uid in _team_user_ids(db, team_id):
+        notify(db, uid, f"La empresa finalizó la videollamada: {ch.title}",
+               "Puedes volver al proyecto para continuar el seguimiento.", f"/retos/{ch.id}")
+    db.commit()
+    return {"active": False}
 
 
 # ================================================================ Seguimiento (hitos)
@@ -439,6 +491,7 @@ def list_messages(ch_id: int, after_id: int = Query(0, description="Para polling
                   user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     _participant(db, ch_id, user)
     return db.scalars(select(Message).where(Message.challenge_id == ch_id, Message.id > after_id)
+                      .where(Message.body.notin_((VIDEOCALL_STARTED, VIDEOCALL_ENDED)))
                       .order_by(Message.id).limit(200)).all()
 
 
@@ -446,6 +499,8 @@ def list_messages(ch_id: int, after_id: int = Query(0, description="Para polling
 def send_message(ch_id: int, data: ChatMessageIn,
                  user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ch = _participant(db, ch_id, user)
+    if data.body in (VIDEOCALL_STARTED, VIDEOCALL_ENDED):
+        raise HTTPException(422, "Mensaje no válido")
     msg = Message(challenge_id=ch.id, author_id=user.id, body=data.body)
     db.add(msg)
     db.commit()
