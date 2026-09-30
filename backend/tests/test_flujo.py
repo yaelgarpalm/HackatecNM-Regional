@@ -293,3 +293,38 @@ def test_fecha_limite_no_puede_ser_pasada(client):
     assert r.status_code == 422 and "ya pasó" in r.json()["detail"]
     r = c.post(f"{API}/challenges", headers=h, json={**base, "deadline": "2099-01-15"})
     assert r.status_code == 201 and r.json()["deadline"] == "2099-01-15"
+
+
+def test_universidad_registra_sus_carreras(client):
+    c = client
+    u1 = register(c, email="vinc@tec-a.mx", full_name="Vinculación A", role="universidad",
+                  organization={"name": "Tec A", "type": "universidad"})["organization_id"]
+    u2 = register(c, email="vinc@tec-b.mx", full_name="Vinculación B", role="universidad",
+                  organization={"name": "Tec B", "type": "universidad"})["organization_id"]
+    h1, h2 = login(c, "vinc@tec-a.mx"), login(c, "vinc@tec-b.mx")
+
+    # Del catálogo, escrita de otra forma: se vincula a la existente, no se crea
+    r = c.post(f"{API}/organizations/{u1}/careers", headers=h1, json={"name": "contador público"}).json()
+    assert r["career"]["name"] == "Licenciatura en Contaduría" and r["created"] is False
+
+    # Nueva: se crea y aparece en el catálogo para todos
+    r = c.post(f"{API}/organizations/{u1}/careers", headers=h1, json={"name": "Ingeniería en Sistemas Energéticos"}).json()
+    assert r["created"] is True
+    assert "Ingeniería en Sistemas Energéticos" in c.get(f"{API}/catalogs").json()["carreras"]
+
+    # Otra universidad la selecciona: ya existe, solo se vincula (sin duplicar por acentos o mayúsculas)
+    r = c.post(f"{API}/organizations/{u2}/careers", headers=h2, json={"name": "ingenieria en sistemas energeticos"}).json()
+    assert r["created"] is False and r["career"]["name"] == "Ingeniería en Sistemas Energéticos"
+    assert r["career"]["universities"] == 2
+
+    # Repetirla no la duplica; cada universidad ve solo las suyas; nadie modifica las de otra
+    assert c.post(f"{API}/organizations/{u2}/careers", headers=h2,
+                  json={"name": "Ingeniería en Sistemas Energéticos"}).json()["already_linked"] is True
+    assert [x["name"] for x in c.get(f"{API}/organizations/{u2}/careers").json()] == ["Ingeniería en Sistemas Energéticos"]
+    assert c.post(f"{API}/organizations/{u2}/careers", headers=h1, json={"name": "Arquitectura"}).status_code == 403
+
+    # Quitarla de la oferta no la borra del catálogo
+    cid = r["career"]["id"]
+    assert c.delete(f"{API}/organizations/{u2}/careers/{cid}", headers=h2).status_code == 204
+    assert c.get(f"{API}/organizations/{u2}/careers").json() == []
+    assert "Ingeniería en Sistemas Energéticos" in c.get(f"{API}/catalogs").json()["carreras"]

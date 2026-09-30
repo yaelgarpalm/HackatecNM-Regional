@@ -13,7 +13,7 @@ from app.models.enums import (
     OrgSize, OrgType, ProposalStatus, Role, TeamRole,
 )
 from app.schemas import ChallengeMatch
-from app.services.careers import CARRERAS
+from app.services.careers import all_careers
 from app.services.common import career_allows, challenge_out
 from app.services.matching import score_challenge_for_user
 
@@ -210,7 +210,7 @@ def university_dashboard(org_id: int, user: User = Depends(get_current_user), db
 
 
 @router.get("/catalogs")
-def catalogs():
+def catalogs(db: Session = Depends(get_db)):
     """Valores válidos para selects/dropdowns en la web y la app (evita codificarlos en el frontend)."""
     as_list = lambda e: [i.value for i in e]  # noqa: E731
     return {
@@ -225,5 +225,5 @@ def catalogs():
         "roles_equipo": as_list(TeamRole),
         "estados_postulacion": as_list(ProposalStatus),
         "estados_hito": as_list(MilestoneStatus),
-        "carreras": list(CARRERAS),
+        "carreras": all_careers(db),
     }

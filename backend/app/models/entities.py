@@ -74,6 +74,30 @@ class User(TimestampMixin, Base):
     rating_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
+# ---------------------------------------------------------------- Carreras
+class Career(Base):
+    """Carrera registrada en la plataforma. Las del catálogo base se guardan al vincularlas a una
+    universidad; las nuevas las crea una universidad y quedan disponibles para todos."""
+    __tablename__ = "careers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(150), unique=True, index=True)
+    created_by_org_id: Mapped[int | None] = mapped_column(ForeignKey("organizations.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class UniversityCareer(Base):
+    """Carreras que ofrece cada universidad."""
+    __tablename__ = "university_careers"
+    __table_args__ = (UniqueConstraint("organization_id", "career_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
+    career_id: Mapped[int] = mapped_column(ForeignKey("careers.id"), index=True)
+
+    career: Mapped[Career] = relationship()
+
+
 # ---------------------------------------------------------------- Capacidades universitarias
 class Capability(TimestampMixin, Base):
     """Laboratorios, equipo, expertos y servicios que ofrece una universidad."""

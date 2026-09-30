@@ -115,7 +115,7 @@ CARRERAS: list[str] = sorted([
 # Otras formas de nombrar una carrera (profesión, siglas, nombres antiguos)
 _ALIAS: dict[str, list[str]] = {
     "Ingeniería Informática": ["informatico", "informatica"],
-    "Ingeniería en Sistemas Computacionales": ["isc", "sistemas computacionales", "sistemas"],
+    "Ingeniería en Sistemas Computacionales": ["isc", "sistemas computacionales"],
     "Ingeniería en Computación": ["computacion", "ciencias de la computacion", "ciencias computacionales"],
     "Ingeniería en Tecnologías de la Información y Comunicaciones": [
         "tic", "tics", "tecnologias de la informacion"],
@@ -192,10 +192,36 @@ def career_keys(text: str | None) -> set[str]:
     return set().union(*(keys for n, keys in found if n == longest))
 
 
+def exact_career(text: str | None) -> str | None:
+    """Carrera del catálogo cuyo nombre o sinónimo coincide con TODO el texto (no con una parte).
+
+    'Contador Público' -> 'Licenciatura en Contaduría'; 'Ing. en Sistemas Energéticos' -> None.
+    """
+    if not text:
+        return None
+    t = _norm(text)
+    keys = _FORMAS.get(t) or _FORMAS.get(_short(text)) or set()
+    return next(iter(keys)) if len(keys) == 1 else None
+
+
 def canonical_career(text: str | None) -> str | None:
     """Nombre oficial del catálogo si el texto se refiere a una sola carrera; si no, None."""
     keys = career_keys(text)
     return next(iter(keys)) if len(keys) == 1 else None
+
+
+def all_careers(db) -> list[str]:
+    """Catálogo completo: carreras base + las que han creado las universidades."""
+    from sqlalchemy import select
+
+    from app.models import Career
+    extra = db.scalars(select(Career.name)).all()
+    return sorted(set(CARRERAS) | set(extra), key=lambda c: _norm(c))
+
+
+def same_career_name(a: str, b: str) -> bool:
+    """Mismo nombre sin importar acentos, mayúsculas ni 'Ing.'/'Lic.'."""
+    return _norm(a) == _norm(b)
 
 
 def career_matches(career: str | None, disciplines: list[str]) -> str | None:

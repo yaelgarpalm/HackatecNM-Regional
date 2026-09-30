@@ -251,6 +251,7 @@ export function UniversityDashboard({ user }: { user: User }) {
         <Card>
           <Row>
             <Button title="Publicar capacidad" icon="add-circle-outline" onPress={() => router.push('/capacidad')} />
+            <Button title="Subir carreras" variant="secondary" icon="school-outline" onPress={() => router.push('/mis-carreras')} />
             <Button title="Ver problemáticas abiertas" variant="secondary" onPress={() => router.push('/retos')} />
             <Button title="Indicadores globales" variant="secondary" onPress={() => router.push('/indicadores')} />
           </Row>

@@ -32,6 +32,9 @@ export default function Capacidades() {
       {canManage && (
         <Row style={{ marginTop: 10 }}>
           <Button small title="Publicar capacidad" icon="add" onPress={() => router.push('/capacidad')} />
+          {user.role === 'universidad' && (
+            <Button small variant="secondary" title="Subir carreras" icon="school-outline" onPress={() => router.push('/mis-carreras')} />
+          )}
           <Button small variant={onlyMine ? 'primary' : 'secondary'} title="Solo de mi institución" onPress={() => setOnlyMine(!onlyMine)} />
         </Row>
       )}

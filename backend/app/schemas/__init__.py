@@ -4,7 +4,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.services.careers import canonical_career
+from app.services.careers import exact_career
 from app.models.enums import (
     CapabilityType, ChallengeStatus, Confidentiality, IPModel, MilestoneStatus,
     Modality, OrgSize, OrgType, ProposalStatus, Role, TeamRole,
@@ -46,11 +46,28 @@ def _official_career(v: str | None) -> str | None:
     """Guarda el nombre oficial del catálogo ('contador' -> 'Licenciatura en Contaduría')."""
     if v is None or not v.strip():
         return None
-    return canonical_career(v) or v.strip()
+    return exact_career(v) or " ".join(v.split())
 
 
 def _official_careers(v: list[str] | None) -> list[str] | None:
     return None if v is None else _clean_list([_official_career(i) or "" for i in v])
+
+
+# ---------------------------------------------------------------- Carreras
+class CareerIn(BaseModel):
+    name: str = Field(min_length=3, max_length=150)
+
+
+class CareerOut(BaseModel):
+    id: int
+    name: str
+    universities: int = 0  # cuántas instituciones la ofrecen
+
+
+class CareerLinkOut(BaseModel):
+    career: CareerOut
+    created: bool          # True si la carrera no existía y se creó
+    already_linked: bool   # True si la universidad ya la tenía
 
 
 # ---------------------------------------------------------------- Auth
