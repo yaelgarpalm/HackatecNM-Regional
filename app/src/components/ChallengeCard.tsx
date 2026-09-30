@@ -25,7 +25,7 @@ export function ChallengeCard({ ch, children }: { ch: Challenge; children?: Reac
         {ch.modalities.map((m) => (
           <Badge key={m} text={label(m)} tone="accent" />
         ))}
-        {ch.deadline && <Badge text={`Cierra ${shortDate(ch.deadline)}`} icon="calendar-outline" />}
+        {!!ch.deadline && <Badge text={`Cierra ${shortDate(ch.deadline)}`} icon="calendar-outline" />}
         <Badge text={`${ch.proposals_count} postulaciones`} icon="people-outline" />
       </Row>
       <Tags items={ch.tags} />

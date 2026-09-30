@@ -27,7 +27,7 @@ export default function Equipos() {
           q.data.map((t) => (
             <Card key={t.id} onPress={() => router.push(`/equipo/${t.id}`)}>
               <H2>{t.name}</H2>
-              {t.description && <Muted>{t.description}</Muted>}
+              {!!t.description && <Muted>{t.description}</Muted>}
               <Row gap={6} style={{ marginTop: 8 }}>
                 <Badge text={`${t.members.length} integrantes`} icon="people-outline" />
                 <Badge text={`${t.disciplines.length} carreras`} tone={t.disciplines.length >= 2 ? 'success' : 'warning'} icon="school-outline" />

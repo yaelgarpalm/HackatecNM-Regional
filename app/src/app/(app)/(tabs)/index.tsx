@@ -57,7 +57,7 @@ function AcademicHome({ user }: { user: User }) {
                 <StatusBadge status={p.status} />
               </Row>
               <Muted>Equipo {p.team?.name}</Muted>
-              {p.feedback && <Muted style={{ marginTop: 4 }}>“{p.feedback}”</Muted>}
+              {!!p.feedback && <Muted style={{ marginTop: 4 }}>“{p.feedback}”</Muted>}
             </Card>
           ))}
       </Section>

@@ -28,13 +28,13 @@ export default function Usuario() {
           <Badge text={label(u.role)} tone="primary" />
           {org.data && <Badge text={org.data.name} icon={org.data.verified ? 'shield-checkmark' : undefined} tone={org.data.verified ? 'success' : 'neutral'} />}
         </Row>
-        {u.career && <Body style={{ marginTop: 8 }}>{u.career}</Body>}
+        {!!u.career && <Body style={{ marginTop: 8 }}>{u.career}</Body>}
         <Tags items={u.skills} />
         <Row style={{ marginTop: 10 }}>
           <Stars value={u.rating_avg} />
           <Muted>{u.rating_count ? `${u.rating_avg.toFixed(1)} de 5 · ${u.rating_count} evaluaciones` : 'Sin evaluaciones todavía'}</Muted>
         </Row>
-        {full?.portfolio_url && (
+        {!!full?.portfolio_url && (
           <Button small variant="ghost" icon="link-outline" title="Portafolio" style={{ alignSelf: 'flex-start' }}
             onPress={() => Linking.openURL(full.portfolio_url!)} />
         )}
@@ -48,7 +48,7 @@ export default function Usuario() {
                 <Stars value={r.score} size={16} />
                 <Muted>Problemática #{r.challenge_id} · {shortDate(r.created_at)}</Muted>
               </Row>
-              {r.comment && <Body style={{ marginTop: 6 }}>“{r.comment}”</Body>}
+              {!!r.comment && <Body style={{ marginTop: 6 }}>“{r.comment}”</Body>}
             </Card>
           ))}
       </Section>

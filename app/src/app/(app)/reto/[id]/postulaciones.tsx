@@ -45,13 +45,13 @@ function ProposalCard({ p, canDecide }: { p: Proposal; canDecide: boolean }) {
 
       <Muted style={{ marginTop: 10, fontWeight: '700' }}>Enfoque</Muted>
       <Body>{p.approach}</Body>
-      {p.work_plan && (
+      {!!p.work_plan && (
         <>
           <Muted style={{ marginTop: 8, fontWeight: '700' }}>Plan de trabajo</Muted>
           <Body>{p.work_plan}</Body>
         </>
       )}
-      {p.feedback && <Muted style={{ marginTop: 8 }}>Comentario: “{p.feedback}”</Muted>}
+      {!!p.feedback && <Muted style={{ marginTop: 8 }}>Comentario: “{p.feedback}”</Muted>}
 
       {canDecide && p.status === 'enviada' && (
         <>

@@ -29,7 +29,7 @@ export default function Sugerencias() {
                 <Badge text={label(m.capability.type)} tone="primary" />
               </Row>
               <Muted>{m.organization_name}</Muted>
-              {m.capability.description && <Body style={{ marginTop: 4 }}>{m.capability.description}</Body>}
+              {!!m.capability.description && <Body style={{ marginTop: 4 }}>{m.capability.description}</Body>}
               <ScoreBar score={m.score} />
               {m.reasons.map((r) => <Muted key={r}>• {r}</Muted>)}
             </Card>

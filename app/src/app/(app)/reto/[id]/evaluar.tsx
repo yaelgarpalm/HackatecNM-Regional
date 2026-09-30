@@ -25,7 +25,7 @@ function ReviewCard({ chId, person }: { chId: string; person: UserPublic }) {
         <H2>{person.full_name}</H2>
         <Badge text={label(person.role)} tone="primary" />
       </Row>
-      {person.career && <Muted>{person.career}</Muted>}
+      {!!person.career && <Muted>{person.career}</Muted>}
       {done ? (
         <Badge text="Evaluación enviada" tone="success" icon="checkmark-circle" />
       ) : (

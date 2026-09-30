@@ -40,7 +40,7 @@ export default function Organizaciones() {
               </Row>
             </Row>
             <Muted>{[label(o.size), o.sector, o.city, o.state].filter(Boolean).join(' · ')}</Muted>
-            {o.description && <Body style={{ marginTop: 4 }}>{o.description}</Body>}
+            {!!o.description && <Body style={{ marginTop: 4 }}>{o.description}</Body>}
             {admin && !o.verified && (
               <Button small variant="success" title="Verificar" icon="shield-checkmark-outline" loading={verify.isPending}
                 onPress={() => verify.mutate(o.id)} style={{ alignSelf: 'flex-start', marginTop: 8 }} />

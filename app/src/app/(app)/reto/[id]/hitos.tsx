@@ -27,13 +27,13 @@ function MilestoneCard({ m, isOwner, isTeam }: { m: Milestone; isOwner: boolean;
         <H2>{m.title}</H2>
         <StatusBadge status={m.status} />
       </Row>
-      {m.due_date && <Muted>Fecha compromiso: {shortDate(m.due_date)}</Muted>}
-      {m.description && <Body style={{ marginTop: 6 }}>{m.description}</Body>}
-      {m.deliverable_url && (
+      {!!m.due_date && <Muted>Fecha compromiso: {shortDate(m.due_date)}</Muted>}
+      {!!m.description && <Body style={{ marginTop: 6 }}>{m.description}</Body>}
+      {!!m.deliverable_url && (
         <Button small variant="ghost" icon="link-outline" title="Abrir entregable" style={{ alignSelf: 'flex-start' }}
           onPress={() => Linking.openURL(m.deliverable_url!)} />
       )}
-      {m.company_comment && <Muted style={{ marginTop: 4 }}>Comentario de la empresa: “{m.company_comment}”</Muted>}
+      {!!m.company_comment && <Muted style={{ marginTop: 4 }}>Comentario de la empresa: “{m.company_comment}”</Muted>}
 
       {isTeam && m.status !== 'aprobado' && (
         <>

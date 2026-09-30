@@ -121,7 +121,7 @@ export default function RetoDetalle() {
                 <H2>Equipo {p.team?.name}</H2>
                 <StatusBadge status={p.status} />
               </Row>
-              {p.feedback && <Muted style={{ marginTop: 4 }}>Comentario de la empresa: “{p.feedback}”</Muted>}
+              {!!p.feedback && <Muted style={{ marginTop: 4 }}>Comentario de la empresa: “{p.feedback}”</Muted>}
               {p.status === 'enviada' && (
                 <Button small variant="secondary" title="Retirar postulación" style={{ alignSelf: 'flex-start', marginTop: 8 }}
                   loading={withdraw.isPending}

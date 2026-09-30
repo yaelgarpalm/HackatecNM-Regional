@@ -64,8 +64,8 @@ export default function Perfil() {
           {org.data && <Badge text={org.data.name} icon={org.data.verified ? 'shield-checkmark' : 'business-outline'} tone={org.data.verified ? 'success' : 'neutral'} />}
         </Row>
         <Muted style={{ marginTop: 6 }}>{user.email}</Muted>
-        {user.career && <Body style={{ marginTop: 8 }}>{user.career}{user.semester ? ` · ${user.semester}° semestre` : ''}</Body>}
-        {user.bio && <Body style={{ marginTop: 6 }}>{user.bio}</Body>}
+        {!!user.career && <Body style={{ marginTop: 8 }}>{user.career}{user.semester ? ` · ${user.semester}° semestre` : ''}</Body>}
+        {!!user.bio && <Body style={{ marginTop: 6 }}>{user.bio}</Body>}
         <Tags items={user.skills} />
         {user.rating_count > 0 && (
           <Row style={{ marginTop: 8 }}>

@@ -35,7 +35,7 @@ export default function EquipoDetalle() {
   return (
     <Screen onRefresh={q.refetch} refreshing={q.isRefetching}>
       <Stack.Screen options={{ title: t.name }} />
-      {t.description && <Body>{t.description}</Body>}
+      {!!t.description && <Body>{t.description}</Body>}
       <Row style={{ marginTop: 8 }} gap={6}>
         <Badge text={`${t.disciplines.length} carrera(s)`} tone={t.disciplines.length >= 2 ? 'success' : 'warning'} icon="school-outline" />
       </Row>

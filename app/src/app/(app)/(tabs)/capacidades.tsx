@@ -54,7 +54,7 @@ export default function Capacidades() {
                 </Row>
               </Row>
               <Muted>{orgName(c.organization_id)}</Muted>
-              {c.description && <Body style={{ marginTop: 6 }}>{c.description}</Body>}
+              {!!c.description && <Body style={{ marginTop: 6 }}>{c.description}</Body>}
               <Tags items={c.tags} tone="neutral" />
               {mine && <Muted style={{ marginTop: 6 }}>Toca para editar</Muted>}
             </Card>
