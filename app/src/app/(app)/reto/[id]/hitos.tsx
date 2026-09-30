@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking } from 'react-native';
 
+import { DateField } from '@/components/DateField';
 import { useAction, useApi } from '@/components/hooks';
 import { Body, Button, Card, Empty, ErrorView, Field, H2, Loading, Muted, Row, Screen, Section, StatusBadge } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -12,8 +13,13 @@ import type { Challenge, Milestone } from '@/lib/types';
 function MilestoneCard({ m, isOwner, isTeam }: { m: Milestone; isOwner: boolean; isTeam: boolean }) {
   const [url, setUrl] = useState(m.deliverable_url ?? '');
   const [comment, setComment] = useState('');
-  const deliver = useAction(() => api.post(`/milestones/${m.id}/deliver`, { deliverable_url: url }), { successMessage: 'Entrega registrada' });
-  const review = useAction((status: string) => api.post(`/milestones/${m.id}/review`, { status, company_comment: comment || null }));
+  const deliver = useAction(() => api.post(`/milestones/${m.id}/deliver`, { deliverable_url: url }), {
+    successMessage: 'Entrega registrada', successDetail: 'La empresa recibió una notificación para revisarla.',
+  });
+  const review = useAction((status: string) => api.post(`/milestones/${m.id}/review`, { status, company_comment: comment || null }), {
+    successMessage: (status) => status === 'aprobado' ? 'Entrega aprobada' : 'Cambios solicitados',
+    successDetail: 'El equipo recibió tu respuesta.',
+  });
 
   return (
     <Card>
@@ -59,7 +65,10 @@ export default function Hitos() {
   const [f, setF] = useState({ title: '', description: '', due_date: '' });
   const create = useAction(() => api.post(`/challenges/${id}/milestones`, {
     title: f.title, description: f.description || null, due_date: f.due_date || null,
-  }), { onSuccess: () => setF({ title: '', description: '', due_date: '' }) });
+  }), {
+    successMessage: (_a: undefined) => `Hito "${f.title}" creado`, successDetail: 'El equipo ya puede verlo y entregar.',
+    onSuccess: () => setF({ title: '', description: '', due_date: '' }),
+  });
 
   const isOwner = !!ch.data && (user.role === 'admin' || user.organization_id === ch.data.organization_id);
   const isTeam = isAcademic(user) && !isOwner;
@@ -82,7 +91,7 @@ export default function Hitos() {
           <Card>
             <Field label="Título" value={f.title} onChangeText={(v) => setF({ ...f, title: v })} placeholder="Prototipo funcional" />
             <Field label="Descripción" value={f.description} onChangeText={(v) => setF({ ...f, description: v })} multiline />
-            <Field label="Fecha compromiso (AAAA-MM-DD)" value={f.due_date} onChangeText={(v) => setF({ ...f, due_date: v })} placeholder="2026-11-15" />
+            <DateField label="Fecha compromiso" value={f.due_date} onChange={(v) => setF({ ...f, due_date: v })} />
             <Button title="Agregar hito" icon="add" disabled={f.title.trim().length < 3} loading={create.isPending} onPress={() => create.mutate(undefined)} />
           </Card>
         </Section>

@@ -14,19 +14,31 @@ export function useApi<T>(path: string | null, query?: Record<string, any>, opts
   });
 }
 
-/** Acción (POST/PATCH/…) que muestra el error y refresca lo necesario al terminar. */
+/** Texto fijo o calculado a partir del argumento y la respuesta de la acción. */
+type Msg<A, R> = string | ((arg: A, r: R) => string | undefined);
+const text = <A, R>(m: Msg<A, R> | undefined, arg: A, r: R) => (typeof m === 'function' ? m(arg, r) : m);
+
+/** Acción (POST/PATCH/…) que avisa si salió bien o mal y refresca lo necesario al terminar. */
 export function useAction<A, R = unknown>(
   fn: (arg: A) => Promise<R>,
-  opts?: { invalidate?: QueryKey[]; onSuccess?: (r: R) => void; successMessage?: string },
+  opts?: {
+    invalidate?: QueryKey[];
+    onSuccess?: (r: R) => void;
+    /** Título del aviso verde de "completado", p. ej. "Problemática publicada" */
+    successMessage?: Msg<A, R>;
+    /** Explicación debajo del título, p. ej. "Los estudiantes ya pueden verla" */
+    successDetail?: Msg<A, R>;
+  },
 ) {
   const qc = useQueryClient();
   return useMutation<R, Error, A>({
     mutationFn: fn,
-    onSuccess: (r) => {
+    onSuccess: (r, arg) => {
       // Por defecto refresca todo lo que esté en pantalla (la app es pequeña y así nunca queda desactualizada)
       if (opts?.invalidate) opts.invalidate.forEach((k) => qc.invalidateQueries({ queryKey: k }));
       else qc.invalidateQueries();
-      if (opts?.successMessage) notify(opts.successMessage);
+      const title = text(opts?.successMessage, arg, r);
+      if (title) notify(title, text(opts?.successDetail, arg, r));
       opts?.onSuccess?.(r);
     },
     onError: (e) => notify('No se pudo completar', e.message, 'error'),

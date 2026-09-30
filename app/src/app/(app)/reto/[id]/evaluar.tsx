@@ -13,6 +13,8 @@ function ReviewCard({ chId, person }: { chId: string; person: UserPublic }) {
   const [comment, setComment] = useState('');
   const [done, setDone] = useState(false);
   const send = useAction(() => api.post(`/challenges/${chId}/reviews`, { reviewee_id: person.id, score, comment: comment || null }), {
+    successMessage: `Evaluación enviada a ${person.full_name}`,
+    successDetail: '¡Gracias! Ayuda a construir la reputación en la plataforma.',
     onSuccess: () => setDone(true),
     invalidate: [],
   });

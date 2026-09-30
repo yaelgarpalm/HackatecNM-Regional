@@ -172,7 +172,8 @@ def change_status(ch_id: int, data: ChallengeStatusIn,
     team_id = accepted_team_id(db, ch)
     if team_id and data.status in (ChallengeStatus.FINALIZADO, ChallengeStatus.CANCELADO):
         for uid in _team_user_ids(db, team_id):
-            notify(db, uid, f"La problemática '{ch.title}' cambió a {data.status.value}",
+            estado = "finalizó" if data.status == ChallengeStatus.FINALIZADO else "fue cancelada"
+            notify(db, uid, f"La problemática '{ch.title}' {estado}",
                    "Ya puedes evaluar a tus contrapartes." if data.status == ChallengeStatus.FINALIZADO else None,
                    f"/retos/{ch.id}")
     db.commit()
@@ -409,7 +410,8 @@ def review_milestone(m_id: int, data: MilestoneReview,
     m.status, m.company_comment = data.status, data.company_comment
     team_id = accepted_team_id(db, m.challenge)
     for uid in _team_user_ids(db, team_id) if team_id else []:
-        notify(db, uid, f"Hito '{m.title}': {data.status.value.replace('_', ' ')}", data.company_comment,
+        resultado = "aprobado ✅" if data.status == MilestoneStatus.APROBADO else "con cambios solicitados"
+        notify(db, uid, f"Hito '{m.title}' {resultado}", data.company_comment,
                f"/retos/{m.challenge_id}/hitos")
     db.commit()
     return m

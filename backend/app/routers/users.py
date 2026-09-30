@@ -57,6 +57,15 @@ def my_notifications(unread_only: bool = False, pag: Pagination = Depends(),
     return pag.apply(db, stmt.order_by(Notification.created_at.desc()))
 
 
+@router.post("/me/notifications/{notification_id}/read", status_code=204)
+def read_one(notification_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Marca como leída una notificación propia (al abrirla desde la app)."""
+    n = db.get(Notification, notification_id)
+    if n and n.user_id == user.id and not n.read:
+        n.read = True
+        db.commit()
+
+
 @router.post("/me/notifications/read-all", status_code=204)
 def read_all(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     for n in db.scalars(select(Notification).where(Notification.user_id == user.id, Notification.read.is_(False))):

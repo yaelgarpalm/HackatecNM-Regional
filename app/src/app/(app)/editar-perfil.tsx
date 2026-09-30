@@ -20,7 +20,10 @@ export default function EditarPerfil() {
   const save = useAction(() => api.patch('/users/me', {
     full_name: f.full_name, career: f.career || null, semester: f.semester ? Number(f.semester) : null,
     skills: splitList(f.skills), bio: f.bio || null, portfolio_url: f.portfolio_url || null,
-  }), { onSuccess: async () => { await reload(); goBack('/perfil'); } });
+  }), {
+    successMessage: 'Perfil actualizado', successDetail: 'Tus cambios ya están guardados.',
+    onSuccess: async () => { await reload(); goBack('/perfil'); },
+  });
 
   return (
     <Screen>

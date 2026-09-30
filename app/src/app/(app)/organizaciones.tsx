@@ -16,7 +16,9 @@ export default function Organizaciones() {
   const [q, setQ] = useState('');
   const [pending, setPending] = useState(admin);
   const r = useApi<Page<Organization>>('/organizations', { type, q, size: 100, verified: pending ? false : undefined });
-  const verify = useAction((id: number) => api.post(`/organizations/${id}/verify`));
+  const verify = useAction((id: number) => api.post(`/organizations/${id}/verify`), {
+    successMessage: 'Organización verificada', successDetail: 'Ahora muestra la insignia de verificada.',
+  });
 
   return (
     <Screen onRefresh={r.refetch} refreshing={r.isRefetching}>

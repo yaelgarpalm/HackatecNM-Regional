@@ -23,7 +23,10 @@ export default function Postular() {
     () => api.post(`/challenges/${id}/proposals`, {
       team_id: teamId, approach, work_plan: plan || null, estimated_weeks: weeks ? Number(weeks) : null,
     }),
-    { successMessage: 'Postulación enviada', onSuccess: () => router.replace(`/reto/${id}`) },
+    {
+      successMessage: '¡Postulación enviada!',
+      successDetail: 'La empresa la revisará y te avisaremos con una notificación.',
+      onSuccess: () => router.replace(`/reto/${id}`) },
   );
 
   if (ch.isLoading || teams.isLoading) return <Loading />;

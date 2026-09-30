@@ -12,7 +12,12 @@ import type { Challenge, Proposal } from '@/lib/types';
 function ProposalCard({ p, canDecide }: { p: Proposal; canDecide: boolean }) {
   const [feedback, setFeedback] = useState('');
   const decide = useAction((status: 'aceptada' | 'rechazada') =>
-    api.patch(`/proposals/${p.id}`, { status, feedback: feedback || null }));
+    api.patch(`/proposals/${p.id}`, { status, feedback: feedback || null }), {
+    successMessage: (status) => status === 'aceptada' ? `¡Propuesta de ${p.team?.name} aceptada!` : 'Propuesta rechazada',
+    successDetail: (status) => status === 'aceptada'
+      ? 'La problemática pasó a "En progreso". Define los hitos para empezar.'
+      : 'El equipo recibió una notificación.',
+  });
 
   return (
     <Card>

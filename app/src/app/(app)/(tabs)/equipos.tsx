@@ -12,6 +12,8 @@ export default function Equipos() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const create = useAction((b: { name: string; description: string }) => api.post<Team>('/teams', b), {
+    successMessage: (b) => `Equipo "${b.name}" creado`,
+    successDetail: 'Ahora invita a compañeros de otras carreras.',
     onSuccess: (t) => { setName(''); setDescription(''); router.push(`/equipo/${t.id}`); },
   });
 

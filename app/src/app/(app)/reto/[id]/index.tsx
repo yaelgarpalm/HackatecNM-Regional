@@ -8,7 +8,7 @@ import {
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { isAcademic, useUser } from '@/lib/auth';
-import { label, money, shortDate, goBack } from '@/lib/format';
+import { label, money, shortDate, goBack, goHome } from '@/lib/format';
 import type { Challenge, ChallengeStatus, Proposal } from '@/lib/types';
 
 const TRANSITIONS: Record<ChallengeStatus, ChallengeStatus[]> = {
@@ -17,6 +17,10 @@ const TRANSITIONS: Record<ChallengeStatus, ChallengeStatus[]> = {
   en_progreso: ['finalizado', 'cancelado'],
   finalizado: [],
   cancelado: [],
+};
+const STATUS_DONE: Record<ChallengeStatus, string> = {
+  abierto: '¡Problemática publicada!', borrador: 'La problemática volvió a borrador', cancelado: 'Problemática cancelada',
+  finalizado: '¡Problemática finalizada!', en_progreso: 'Problemática en progreso',
 };
 const TRANSITION_TEXT: Record<string, string> = {
   abierto: 'Publicar', borrador: 'Volver a borrador', cancelado: 'Cancelar problemática', finalizado: 'Marcar como finalizado',
@@ -44,10 +48,16 @@ export default function RetoDetalle() {
   const academic = isAcademic(user);
   const props = useApi<Proposal[]>(ch && (isOwner || academic) ? `/challenges/${id}/proposals` : null);
 
-  const nda = useAction(() => api.post(`/challenges/${id}/nda`));
-  const setStatus = useAction((status: ChallengeStatus) => api.patch(`/challenges/${id}/status`, { status }));
-  const withdraw = useAction((pid: number) => api.patch(`/proposals/${pid}`, { status: 'retirada' }));
-  const remove = useAction(() => api.del(`/challenges/${id}`), { onSuccess: () => goBack('/') });
+  const nda = useAction(() => api.post(`/challenges/${id}/nda`), {
+    successMessage: 'Acuerdo de confidencialidad aceptado', successDetail: 'Ya puedes ver la descripción completa.',
+  });
+  const setStatus = useAction((status: ChallengeStatus) => api.patch(`/challenges/${id}/status`, { status }), {
+    successMessage: (s) => STATUS_DONE[s],
+  });
+  const withdraw = useAction((pid: number) => api.patch(`/proposals/${pid}`, { status: 'retirada' }), {
+    successMessage: 'Postulación retirada',
+  });
+  const remove = useAction(() => api.del(`/challenges/${id}`), { successMessage: 'Borrador eliminado', onSuccess: () => goBack('/') });
 
   if (q.isLoading) return <Loading />;
   if (q.error || !ch) return <Screen><ErrorView error={q.error} onRetry={q.refetch} /></Screen>;
@@ -166,6 +176,8 @@ export default function RetoDetalle() {
           </Row>
         </Section>
       )}
+      <Button title="Volver al inicio" variant="secondary" icon="home-outline" onPress={goHome}
+        style={{ marginTop: 24, alignSelf: 'center' }} />
     </Screen>
   );
 }

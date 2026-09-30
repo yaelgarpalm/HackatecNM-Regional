@@ -50,7 +50,13 @@ function ChallengeForm({ id, initial }: { id?: string; initial: typeof EMPTY }) 
     (publish: boolean) => editing
       ? api.patch<Challenge>(`/challenges/${id}`, body())
       : api.post<Challenge>('/challenges', { ...body(), publish }),
-    { onSuccess: (c) => router.replace(`/reto/${c.id}`) },
+    {
+      successMessage: (publish) => editing ? 'Cambios guardados' : publish ? '¡Problemática publicada!' : 'Borrador guardado',
+      successDetail: (publish) => editing ? 'La problemática ya muestra la información actualizada.'
+        : publish ? 'Los estudiantes de las carreras que pediste ya pueden verla y postularse.'
+        : 'Nadie más la ve todavía. Publícala cuando esté lista.',
+      onSuccess: (c) => router.replace(`/reto/${c.id}`),
+    },
   );
 
 

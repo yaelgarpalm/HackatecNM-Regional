@@ -23,7 +23,7 @@ function OrgForm({ org }: { org: Organization }) {
   });
   const set = (k: keyof typeof f) => (v: any) => setF({ ...f, [k]: v });
   const save = useAction(() => api.patch(`/organizations/${org.id}`, f), {
-    successMessage: 'Datos actualizados', onSuccess: () => goBack('/perfil'),
+    successMessage: 'Datos de la organización actualizados', onSuccess: () => goBack('/perfil'),
   });
 
   return (

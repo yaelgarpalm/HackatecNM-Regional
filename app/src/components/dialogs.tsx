@@ -44,41 +44,63 @@ export function notify(title: string, message?: string, kind: ToastKind = 'succe
 }
 
 // ---------------------------------------------------------------- Componentes
-const TOAST_STYLE: Record<ToastKind, { icon: IconName; color: string; soft: string }> = {
-  success: { icon: 'checkmark-circle', color: colors.success, soft: colors.successSoft },
-  error: { icon: 'alert-circle', color: colors.danger, soft: colors.dangerSoft },
-  info: { icon: 'information-circle', color: colors.primary, soft: colors.primarySoft },
+const TOAST_STYLE: Record<ToastKind, { icon: IconName; color: string; soft: string; label: string }> = {
+  success: { icon: 'checkmark-circle', color: colors.success, soft: colors.successSoft, label: 'Listo' },
+  error: { icon: 'alert-circle', color: colors.danger, soft: colors.dangerSoft, label: 'Error' },
+  info: { icon: 'information-circle', color: colors.primary, soft: colors.primarySoft, label: 'Aviso' },
 };
+const DURATION: Record<ToastKind, number> = { success: 4000, info: 4500, error: 7000 };
 
 function ToastCard({ toast, onClose }: { toast: Toast; onClose: (id: number) => void }) {
   const [anim] = useState(() => new Animated.Value(0));
+  const [progress] = useState(() => new Animated.Value(1));
   const st = TOAST_STYLE[toast.kind];
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
-    const t = setTimeout(() => onClose(toast.id), toast.kind === 'error' ? 6000 : 3500);
+    Animated.spring(anim, { toValue: 1, friction: 7, tension: 80, useNativeDriver: false }).start();
+    // Barra inferior que se vacía mientras el aviso sigue en pantalla
+    Animated.timing(progress, { toValue: 0, duration: DURATION[toast.kind], useNativeDriver: false }).start();
+    const t = setTimeout(() => onClose(toast.id), DURATION[toast.kind]);
     return () => clearTimeout(t);
-  }, [anim, onClose, toast.id, toast.kind]);
+  }, [anim, progress, onClose, toast.id, toast.kind]);
 
   return (
-    <Animated.View style={{
+    <Animated.View accessibilityRole="alert" style={{
       opacity: anim,
-      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }],
-      flexDirection: 'row', alignItems: 'flex-start', gap: 10, width: '100%', maxWidth: 440,
-      backgroundColor: colors.card, borderRadius: radius.lg, padding: 12, marginBottom: 8,
-      borderLeftWidth: 5, borderLeftColor: st.color, borderWidth: 1, borderColor: colors.border,
-      shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6,
+      transform: [
+        { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) },
+        { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+      ],
+      width: '100%', maxWidth: 460, backgroundColor: colors.card, borderRadius: 16, marginBottom: 10,
+      borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+      shadowColor: '#0F1E32', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 8,
     }}>
-      <View style={{ backgroundColor: st.soft, borderRadius: 999, padding: 6 }}>
-        <Ionicons name={st.icon} size={20} color={st.color} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
+        <View style={{
+          width: 42, height: 42, borderRadius: 21, backgroundColor: st.soft, alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name={st.icon} size={26} color={st.color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: st.color, letterSpacing: 0.6, textTransform: 'uppercase' }}>
+            {st.label}
+          </Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginTop: 1 }}>{toast.title}</Text>
+          {toast.message ? (
+            <Text style={{ fontSize: 13, color: colors.muted, marginTop: 3, lineHeight: 18 }}>{toast.message}</Text>
+          ) : null}
+        </View>
+        <Pressable onPress={() => onClose(toast.id)} hitSlop={10} accessibilityLabel="Cerrar aviso"
+          style={({ pressed }) => ({ padding: 4, borderRadius: 999, backgroundColor: pressed ? colors.bg : 'transparent' })}>
+          <Ionicons name="close" size={18} color={colors.muted} />
+        </Pressable>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{toast.title}</Text>
-        {toast.message ? <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>{toast.message}</Text> : null}
+      <View style={{ height: 4, backgroundColor: st.soft }}>
+        <Animated.View style={{
+          height: 4, backgroundColor: st.color,
+          width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+        }} />
       </View>
-      <Pressable onPress={() => onClose(toast.id)} hitSlop={8} accessibilityLabel="Cerrar aviso">
-        <Ionicons name="close" size={18} color={colors.muted} />
-      </Pressable>
     </Animated.View>
   );
 }

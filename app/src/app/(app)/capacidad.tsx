@@ -30,9 +30,13 @@ function CapacidadForm({ id, initial }: { id?: string; initial?: Capability }) {
   const body = () => ({ ...f, tags: splitList(f.tags), contact_user_id: user.id });
   const save = useAction(
     () => (id ? api.put(`/capabilities/${id}`, body()) : api.post(`/organizations/${user.organization_id}/capabilities`, body())),
-    { onSuccess: () => goBack('/capacidades') },
+    {
+      successMessage: id ? 'Capacidad actualizada' : 'Capacidad publicada',
+      successDetail: 'Las empresas la verán en sus sugerencias.',
+      onSuccess: () => goBack('/capacidades'),
+    },
   );
-  const remove = useAction(() => api.del(`/capabilities/${id}`), { onSuccess: () => goBack('/capacidades') });
+  const remove = useAction(() => api.del(`/capabilities/${id}`), { successMessage: 'Capacidad eliminada', onSuccess: () => goBack('/capacidades') });
 
   return (
     <Screen>

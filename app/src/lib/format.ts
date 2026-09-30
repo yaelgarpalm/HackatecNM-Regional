@@ -84,3 +84,9 @@ export function goBack(fallback: Href) {
   if (router.canGoBack()) router.back();
   else router.replace(fallback);
 }
+
+/** Regresa a la pantalla de Inicio desde cualquier pantalla interna. */
+export function goHome() {
+  if (router.canDismiss()) router.dismissAll();
+  router.replace('/');
+}

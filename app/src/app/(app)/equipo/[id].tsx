@@ -19,9 +19,11 @@ export default function EquipoDetalle() {
   const [role, setRole] = useState<'estudiante' | 'academico'>('estudiante');
   const results = useApi<Page<UserPublic>>(search ? '/users' : null, { q: search, role, size: 20 });
 
-  const add = useAction((b: { user_id: number; role: string }) => api.post(`/teams/${id}/members`, b));
-  const remove = useAction((uid: number) => api.del(`/teams/${id}/members/${uid}`));
-  const leave = useAction(() => api.del(`/teams/${id}/members/${user.id}`), { onSuccess: () => router.replace('/equipos') });
+  const add = useAction((b: { user_id: number; role: string }) => api.post(`/teams/${id}/members`, b), {
+    successMessage: 'Integrante agregado', successDetail: 'Le avisamos con una notificación.',
+  });
+  const remove = useAction((uid: number) => api.del(`/teams/${id}/members/${uid}`), { successMessage: 'Integrante quitado del equipo' });
+  const leave = useAction(() => api.del(`/teams/${id}/members/${user.id}`), { successMessage: 'Saliste del equipo', onSuccess: () => router.replace('/equipos') });
 
   if (q.isLoading) return <Loading />;
   if (q.error || !q.data) return <Screen><ErrorView error={q.error} /></Screen>;
