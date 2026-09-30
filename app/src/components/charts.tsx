@@ -6,8 +6,9 @@
  * usan la paleta de estado y siempre van con ícono y texto, nunca solo color.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useState, type ComponentProps } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useEffect, useState, type ComponentProps } from 'react';
+import { AccessibilityInfo, Platform, Pressable, Text, View } from 'react-native';
+import Svg, { Circle, G, Path } from 'react-native-svg';
 
 import { colors, radius } from './theme';
 
@@ -23,7 +24,38 @@ export const VIZ = {
   warning: '#fab219',
   serious: '#ec835a',
   critical: '#d03b3b',
+  violet: '#4a3aa7',
+  neutralDark: '#8A96A3',
 };
+
+/** Colores para rebanadas categóricas: 4 validados con todos los pares (en un pastel todos se tocan). */
+export const PIE_COLORS = [VIZ.blue, VIZ.orange, VIZ.aqua, VIZ.violet];
+
+// ---------------------------------------------------------------- Animación de entrada
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+/** Avance 0 → 1 con aceleración suave; vuelve a empezar cuando cambia `key`. Respeta "reducir movimiento". */
+export function useGrow(key: string, duration = 900) {
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    let frame = 0;
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
+      if (cancelled) return;
+      if (reduce) return setP(1);
+      const start = Date.now();
+      setP(0);
+      const tick = () => {
+        const t = Math.min(1, (Date.now() - start) / duration);
+        setP(easeOut(t));
+        if (t < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    }).catch(() => setP(1));
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
+  }, [key, duration]);
+  return p;
+}
 
 // Textos siempre en tinta de texto (nunca del color de la serie)
 const ink = { primary: colors.text, secondary: colors.muted };
@@ -53,6 +85,7 @@ export function Kpi({ label, value, icon, hint, meter, delta, tone = 'default' }
   tone?: 'default' | 'critical' | 'good';
 }) {
   const accent = tone === 'critical' ? VIZ.critical : tone === 'good' ? VIZ.good : VIZ.blue;
+  const grow = useGrow(`${label}:${meter}`, 1000);
   return (
     // 3 por fila en pantallas anchas, 2 en el celular (minWidth hace que bajen de fila)
     <View style={{ flexGrow: 1, flexBasis: '30%', minWidth: 150, backgroundColor: colors.card, borderRadius: radius.lg, padding: 14,
@@ -64,7 +97,7 @@ export function Kpi({ label, value, icon, hint, meter, delta, tone = 'default' }
       <Text style={{ fontSize: 28, fontWeight: '800', color: ink.primary, marginTop: 6 }}>{value}</Text>
       {meter != null && (
         <View style={{ height: 6, backgroundColor: VIZ.track, borderRadius: 999, marginTop: 6, overflow: 'hidden' }}>
-          <View style={{ width: `${Math.round(Math.min(1, meter) * 100)}%`, height: 6, backgroundColor: accent, borderRadius: 999 }} />
+          <View style={{ width: `${Math.min(1, meter) * grow * 100}%`, height: 6, backgroundColor: accent, borderRadius: 999 }} />
         </View>
       )}
       {delta && (
@@ -133,6 +166,7 @@ export function MonthlyColumns({ data }: { data: { mes: string; postulaciones: n
   const max = Math.max(1, ...data.map((d) => d.postulaciones));
   const H = 140;
   const sel = data.find((d) => d.mes === active);
+  const grow = useGrow(data.map((d) => `${d.mes}${d.postulaciones}${d.aceptadas}`).join('|'), 1000);
 
   return (
     <View>
@@ -161,8 +195,8 @@ export function MonthlyColumns({ data }: { data: { mes: string; postulaciones: n
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: H + 20, gap: 10,
             borderBottomWidth: 1, borderColor: colors.border }}>
             {data.map((d) => {
-              const h = (d.postulaciones / max) * H;
-              const acc = (d.aceptadas / max) * H;
+              const h = (d.postulaciones / max) * H * grow;
+              const acc = (d.aceptadas / max) * H * grow;
               const dim = active && active !== d.mes;
               return (
                 <Pressable key={d.mes} onHoverIn={() => setActive(d.mes)} onHoverOut={() => setActive(null)}
@@ -214,6 +248,7 @@ export type HBar = { key: string; label: string; value: number; display: string;
 export function HBars({ rows, max, onPress }: { rows: HBar[]; max?: number; onPress?: (key: string) => void }) {
   const [active, setActive] = useState<string | null>(null);
   const top = max ?? Math.max(1, ...rows.map((r) => r.value));
+  const grow = useGrow(rows.map((r) => `${r.key}${r.value}`).join('|'), 1000);
   return (
     <View style={{ gap: 12 }}>
       {rows.map((r) => (
@@ -226,12 +261,102 @@ export function HBars({ rows, max, onPress }: { rows: HBar[]; max?: number; onPr
             <Text style={{ fontSize: 13, color: ink.primary, fontWeight: '800' }}>{r.display}</Text>
           </View>
           <View style={{ height: 10, backgroundColor: VIZ.track, borderRadius: 999, overflow: 'hidden' }}>
-            <View style={{ width: `${Math.max(r.value > 0 ? 2 : 0, (r.value / top) * 100)}%`, height: 10,
+            <View style={{ width: `${Math.max(r.value > 0 ? 2 : 0, (r.value / top) * 100) * grow}%`, height: 10,
               backgroundColor: r.color ?? VIZ.blue, borderRadius: 999 }} />
           </View>
           {!!r.note && <Text style={{ fontSize: 12, color: ink.secondary, marginTop: 3 }}>{r.note}</Text>}
         </Pressable>
       ))}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- Pastel (dona) animado
+/** Trazo SVG de una rebanada de dona entre los ángulos a0 y a1 (radianes, 0 = arriba). */
+function arc(cx: number, cy: number, R: number, r: number, a0: number, a1: number) {
+  const p = (rad: number, ang: number) => `${cx + rad * Math.sin(ang)} ${cy - rad * Math.cos(ang)}`;
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  return `M ${p(R, a0)} A ${R} ${R} 0 ${large} 1 ${p(R, a1)} L ${p(r, a1)} A ${r} ${r} 0 ${large} 0 ${p(r, a0)} Z`;
+}
+
+export function PieChart({ segments, unit = '', centerLabel = 'Total', size = 190 }: {
+  segments: Segment[];
+  /** Texto después del número en el detalle, p. ej. " hitos" */
+  unit?: string;
+  centerLabel?: string;
+  size?: number;
+}) {
+  const [active, setActive] = useState<string | null>(null);
+  const total = segments.reduce((a, s) => a + s.value, 0);
+  const grow = useGrow(segments.map((s) => `${s.key}${s.value}`).join('|'), 1100);
+  const sel = segments.find((s) => s.key === active);
+  if (!total) return null;
+
+  const cx = size / 2;
+  const R = size / 2 - 8; // deja espacio para que la rebanada activa "salga"
+  const r = R * 0.6;
+  const sweep = Math.PI * 2 * grow;
+  // Ángulo de inicio y fin de cada rebanada (proporcional a su valor)
+  const slices = segments.filter((s) => s.value > 0).map((s, i, arr) => {
+    const before = arr.slice(0, i).reduce((t, x) => t + x.value, 0);
+    return { s, a0: (before / total) * sweep, a1: ((before + s.value) / total) * sweep };
+  });
+  const toggle = (key: string) => setActive(active === key ? null : key);
+
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <View style={{ width: size, height: size }}>
+        <Svg width={size} height={size}>
+          <Circle cx={cx} cy={cx} r={(R + r) / 2} stroke={VIZ.track} strokeWidth={R - r} fill="none" />
+          <G>
+            {slices.map(({ s, a0, a1: end }) => {
+              let a1 = end;
+              if (a1 - a0 < 0.0001) return null;
+              if (a1 - a0 >= Math.PI * 2 - 0.0001) a1 = a0 + Math.PI * 2 - 0.0001; // una sola rebanada = anillo completo
+              const on = active === s.key;
+              return (
+                <Path key={s.key} d={arc(cx, cx, on ? R + 6 : R, r, a0, a1)} fill={s.color}
+                  opacity={active && !on ? 0.35 : 1} stroke="#fff" strokeWidth={2}
+                  accessibilityLabel={`${s.label}: ${s.value}${unit}`}
+                  // En web react-native-svg convierte onPress en props desconocidas del DOM: ahí se usan eventos del mouse
+                  {...(Platform.OS === 'web'
+                    ? { onClick: () => toggle(s.key), onMouseEnter: () => setActive(s.key), onMouseLeave: () => setActive(null) } as object
+                    : { onPress: () => toggle(s.key) })} />
+              );
+            })}
+          </G>
+        </Svg>
+        {/* Centro: total, o la rebanada seleccionada */}
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, width: size, height: size,
+          alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: ink.primary }}>
+            {sel ? sel.value : Math.round(total * grow)}
+          </Text>
+          {/* El texto cabe dentro del hueco de la dona */}
+          <Text numberOfLines={2} style={{ width: r * 1.5, fontSize: 11, lineHeight: 14, color: ink.secondary, textAlign: 'center' }}>
+            {sel ? `${sel.label} · ${Math.round((sel.value / total) * 100)}%` : centerLabel}
+          </Text>
+        </View>
+      </View>
+
+      {/* Leyenda con valores: la identidad nunca depende solo del color */}
+      <View style={{ flexGrow: 1, flexBasis: 170, gap: 6 }}>
+        {segments.map((s) => (
+          <Pressable key={s.key} onHoverIn={() => setActive(s.key)} onHoverOut={() => setActive(null)}
+            onPress={() => setActive(s.key)} accessibilityRole="button" accessibilityLabel={`${s.label}: ${s.value}${unit}`}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, paddingHorizontal: 8,
+              borderRadius: radius.md, backgroundColor: active === s.key ? colors.bg : 'transparent',
+              opacity: s.value ? 1 : 0.5 }}>
+            {s.icon ? <Ionicons name={s.icon} size={16} color={s.color} />
+              : <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: s.color }} />}
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: ink.primary }}>{s.label}</Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: ink.primary }}>{s.value}</Text>
+            <Text style={{ width: 40, textAlign: 'right', fontSize: 12, color: ink.secondary }}>
+              {Math.round((s.value / total) * 100)}%
+            </Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }

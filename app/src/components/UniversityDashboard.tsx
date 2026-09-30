@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { HBars, Kpi, MonthlyColumns, StackedBar, VIZ, type Segment } from '@/components/charts';
+import { HBars, Kpi, MonthlyColumns, PIE_COLORS, PieChart, VIZ, type Segment } from '@/components/charts';
 import { useApi } from '@/components/hooks';
 import { colors, radius } from '@/components/theme';
 import {
@@ -35,8 +35,8 @@ const ESTADOS: Record<string, { label: string; color: string; icon: IconName }> 
   postulado: { label: 'Postulados', color: VIZ.orange, icon: 'paper-plane-outline' },
   finalizado: { label: 'Finalizados', color: VIZ.aqua, icon: 'checkmark-done-outline' },
   no_seleccionado: { label: 'No seleccionados', color: VIZ.neutral, icon: 'close-circle-outline' },
-  retirado: { label: 'Retirados', color: VIZ.neutral, icon: 'return-down-back-outline' },
-  cancelado: { label: 'Cancelados', color: VIZ.neutral, icon: 'ban-outline' },
+  retirado: { label: 'Retirados', color: VIZ.neutralDark, icon: 'return-down-back-outline' },
+  cancelado: { label: 'Cancelados', color: VIZ.neutralDark, icon: 'ban-outline' },
 };
 /** Semáforo de cumplimiento de cada proyecto. */
 const CUMPLIMIENTO: Record<string, { label: string; tone: 'success' | 'danger' | 'warning' | 'neutral' | 'primary'; icon: IconName }> = {
@@ -143,6 +143,12 @@ export function UniversityDashboard({ user }: { user: User }) {
     { key: 'pendientes', label: 'Pendientes', value: c.pendientes, color: VIZ.neutral, icon: 'ellipse-outline' },
     { key: 'cambios', label: 'Con cambios', value: c.con_cambios, color: VIZ.serious, icon: 'create' },
   ] : [];
+  // Carreras: las 4 con más alumnos con color propio; el resto se agrupa en gris (más de 4 colores no se distinguen)
+  const carrerasSeg: Segment[] = d ? [
+    ...d.carreras.slice(0, 4).map((x, i) => ({ key: x.carrera, label: shortCareer(x.carrera), value: x.alumnos, color: PIE_COLORS[i] })),
+    ...(d.carreras.length > 4 ? [{ key: 'otras', label: 'Otras carreras', color: VIZ.neutral,
+      value: d.carreras.slice(4).reduce((a, x) => a + x.alumnos, 0) }] : []),
+  ] : [];
   const estadosSeg: Segment[] = d ? Object.entries(d.proyectos_por_estado)
     .filter(([key, v]) => v > 0 || !['retirado', 'cancelado'].includes(key))
     .map(([key, v]) => ({ key, label: ESTADOS[key].label, value: v, color: ESTADOS[key].color, icon: ESTADOS[key].icon })) : [];
@@ -178,8 +184,8 @@ export function UniversityDashboard({ user }: { user: User }) {
           {/* ---------- Gráficas ---------- */}
           <Section title="Estado de cumplimiento">
             <Row gap={10} style={{ alignItems: 'stretch' }}>
-              <ChartCard title="Hitos por estado" subtitle="Toca o pasa el mouse sobre la barra para ver el detalle">
-                {c.total ? <StackedBar segments={hitosSeg} unit=" hitos" />
+              <ChartCard title="Hitos por estado" subtitle="Toca una rebanada o pasa el mouse por la lista para ver el detalle">
+                {c.total ? <PieChart segments={hitosSeg} unit=" hitos" centerLabel="hitos" />
                   : <Muted>Cuando las empresas definan hitos en los proyectos, aquí verás su avance.</Muted>}
               </ChartCard>
               <ChartCard title="Avance por proyecto en curso" subtitle="Hitos aprobados de cada proyecto">
@@ -202,7 +208,7 @@ export function UniversityDashboard({ user }: { user: User }) {
           <Section title="Estado de los proyectos">
             <Row gap={10} style={{ alignItems: 'stretch' }}>
               <ChartCard title="Proyectos por estado" subtitle="Todas las postulaciones y proyectos de tus alumnos">
-                {d.proyectos.length ? <StackedBar segments={estadosSeg} unit=" proyectos" />
+                {estadosSeg.some((x) => x.value > 0) ? <PieChart segments={estadosSeg} unit=" proyectos" centerLabel="proyectos" />
                   : <Muted>Tus alumnos todavía no se postulan a ninguna problemática.</Muted>}
               </ChartCard>
               <ChartCard title="Postulaciones por mes" subtitle="Últimos 6 meses">
@@ -213,11 +219,8 @@ export function UniversityDashboard({ user }: { user: User }) {
 
           <Section title="Alumnos por carrera">
             <ChartCard title="¿Qué carreras participan más?" subtitle="Alumnos postulados o en proyectos, por carrera">
-              {d.carreras.length ? (
-                <HBars rows={d.carreras.map((x) => ({
-                  key: x.carrera, label: shortCareer(x.carrera), value: x.alumnos, display: `${x.alumnos} alumno(s)`,
-                }))} />
-              ) : <Muted>Aún no hay alumnos participando.</Muted>}
+              {d.carreras.length ? <PieChart segments={carrerasSeg} unit=" alumnos" centerLabel="alumnos" />
+                : <Muted>Aún no hay alumnos participando.</Muted>}
             </ChartCard>
           </Section>
 
