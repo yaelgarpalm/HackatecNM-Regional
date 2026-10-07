@@ -1,7 +1,8 @@
 ﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-  Publica VinculaTec en un Windows Server 2022 con IIS + DNS, usando la base de datos de Azure PostgreSQL.
+  Publica VinculaTec en un Windows Server 2022 con IIS + DNS, con la base en Azure PostgreSQL o en este
+  mismo servidor (PostgreSQL local, opción -BdLocal).
 
 .DESCRIPTION
   Ejecutar en el servidor, como Administrador, desde la carpeta del repositorio:
@@ -12,7 +13,8 @@
     1. Instala IIS, URL Rewrite y ARR (proxy inverso) y el rol de Servidor DNS.
     2. Crea la zona DNS del dominio (registros @, www y, con -DnsPublico, ns1/ns2).
     3. Instala Python y el backend FastAPI como servicio de Windows (cirus-api) en 127.0.0.1:8000.
-       El backend se conecta a Azure PostgreSQL con el DATABASE_URL que se le pida.
+       El backend se conecta a Azure PostgreSQL con el DATABASE_URL que se le pida, o con -BdLocal
+       instala PostgreSQL aquí mismo, crea la base y carga los datos de demostración.
     4. Instala Node.js, compila la web (Expo) y la publica en IIS en http://<dominio>.
     5. Si el DNS público ya apunta a este servidor, saca el certificado HTTPS gratis (Let's Encrypt, win-acme)
        y activa la redirección http -> https. Si aún no apunta, vuelve a correr el script cuando propague.
@@ -22,6 +24,8 @@
 
 .EXAMPLE
   .\deploy\windows\desplegar.ps1 -Correo yo@correo.com
+.EXAMPLE
+  .\deploy\windows\desplegar.ps1 -Correo yo@correo.com -BdLocal
 .EXAMPLE
   .\deploy\windows\desplegar.ps1 -Correo yo@correo.com -DnsPublico
 .EXAMPLE
@@ -37,6 +41,12 @@ param(
     [string]$Correo,
     # Conexión a Azure PostgreSQL. Si no se da y no existe C:\cirus\backend\.env, se pide en pantalla.
     [string]$DatabaseUrl,
+    # Base de datos en este servidor: instala PostgreSQL, crea la base vinculatec y carga los datos de demo
+    [switch]$BdLocal,
+    # Contraseña del usuario postgres, solo si PostgreSQL ya estaba instalado antes de este script
+    [string]$ClavePostgres,
+    # Instalador de PostgreSQL ya descargado, si la descarga automática falla
+    [string]$InstaladorPostgres,
     # Este servidor será el DNS autoritativo del dominio (nameservers ns1/ns2.<dominio> en Hostinger)
     [switch]$DnsPublico,
     # Solo publicar la web y usar el backend que ya está en Azure App Service
@@ -120,6 +130,58 @@ function New-Secreto {
     return [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
 }
 
+function New-Clave {
+    # Solo letras, números, - y _ (sirve en la URL de conexión, en SQL y en la línea de comandos);
+    # empieza con letra para que ningún instalador la confunda con una opción
+    return 'k' + (New-Secreto)
+}
+
+function Save-Privado([string]$Ruta, [string]$Texto) {
+    # Archivo que solo leen Administradores y SYSTEM
+    Write-Utf8 $Ruta $Texto
+    icacls $Ruta /inheritance:r /grant:r '*S-1-5-32-544:F' '*S-1-5-18:F' | Out-Null
+}
+
+function Find-InstaladorPostgres {
+    # EDB publica los instaladores como postgresql-17.<menor>-<compilación>-windows-x64.exe; busca el más nuevo
+    foreach ($menor in 20..0) {
+        foreach ($compilacion in 3..1) {
+            $nombre = "postgresql-17.$menor-$compilacion-windows-x64.exe"
+            $url = "https://get.enterprisedb.com/postgresql/$nombre"
+            try {
+                $r = Invoke-WebRequest -Uri $url -Method Head -UseBasicParsing -TimeoutSec 15
+                if ($r.StatusCode -eq 200) { return @{ Url = $url; Nombre = $nombre } }
+            } catch { }
+        }
+    }
+    throw ('No encontré el instalador de PostgreSQL 17. Descárgalo de ' +
+        'https://www.enterprisedb.com/downloads/postgres-postgresql-downloads (Windows x86-64, versión 17) ' +
+        'y vuelve a correr el script con -InstaladorPostgres C:\ruta\al\instalador.exe')
+}
+
+function Invoke-Psql([string]$Sql) {
+    # Ejecuta una instrucción como el usuario postgres y devuelve el resultado sin formato
+    $antes = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $env:PGPASSWORD = $ClavePostgres
+    try {
+        $salida = & $psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -tAc $Sql
+        if ($LASTEXITCODE -ne 0) { throw "psql falló: $($Sql -replace "PASSWORD '[^']*'", "PASSWORD '***'")" }
+        return "$salida".Trim()
+    } finally {
+        $ErrorActionPreference = $antes
+        Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    }
+}
+
+function Wait-Postgres {
+    for ($i = 0; $i -lt 30; $i++) {
+        try { if ((Invoke-Psql 'SELECT 1') -eq '1') { return } } catch { }
+        Start-Sleep -Seconds 2
+    }
+    throw 'PostgreSQL no responde en 127.0.0.1:5432'
+}
+
 function Wait-Url([string]$Url, [string]$HostHeader, [int]$Segundos = 90) {
     # Espera a que la URL conteste (2xx o redirección). HttpWebRequest deja fijar el Host
     # para probar el sitio de IIS aunque el dominio todavía no resuelva a este servidor.
@@ -157,7 +219,9 @@ function Get-TieneAaaa([string]$Nombre) {
 
 Write-Host "Repositorio: $Repo"
 Write-Host "Dominio:     $Dominio (y www.$Dominio)"
-Write-Host "Backend:     $(if ($BackendAzure) { "Azure App Service ($UrlBackendAzure)" } else { "este servidor (servicio $Servicio) + Azure PostgreSQL" })"
+Write-Host "Backend:     $(if ($BackendAzure) { "Azure App Service ($UrlBackendAzure)" } else { "este servidor (servicio $Servicio)" })"
+Write-Host "Base:        $(if ($BdLocal) { 'PostgreSQL en este servidor' } elseif ($BackendAzure) { 'la del backend de Azure' } else { 'Azure PostgreSQL' })"
+if ($BdLocal -and $BackendAzure) { throw '-BdLocal y -BackendAzure no se pueden usar juntos' }
 
 if (-not (Test-Path (Join-Path $Repo 'app\package.json')) -or -not (Test-Path (Join-Path $Repo 'backend\requirements.txt'))) {
     throw "No encuentro app\ y backend\ en $Repo. Corre el script desde la copia del repositorio."
@@ -173,6 +237,13 @@ if (-not $IpPublica) {
 }
 if ($IpPublica -notmatch '^\d{1,3}(\.\d{1,3}){3}$') { throw 'No pude detectar la IP pública. Pásala con -IpPublica 1.2.3.4' }
 Ok "IP pública: $IpPublica"
+$ipLocal = @(Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' } |
+        ForEach-Object { $_.IPv4Address.IPAddress })[0]
+$detrasDeNat = $IpPublica -notin @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | ForEach-Object IPAddress)
+if ($detrasDeNat) {
+    Aviso "Este equipo sale a Internet a través de un router o NAT (su IP en la red local es $ipLocal)."
+    Aviso 'Para que lo vean desde Internet hay que reenviar puertos hacia esa IP (ver el resumen al final).'
+}
 
 # ---------------------------------------------------------------------------------------------
 Paso "Roles de Windows: IIS$(if (-not $SinDns) { ' y Servidor DNS' })"
@@ -232,10 +303,13 @@ if (-not $SinDns) {
             Remove-DnsServerResourceRecord -ZoneName $Dominio -Force
         Add-DnsServerResourceRecordA -ZoneName $Dominio -Name $Nombre -IPv4Address $Ip -TimeToLive (New-TimeSpan -Minutes 5)
     }
-    Set-RegistroA '@' $IpPublica
-    Set-RegistroA 'www' $IpPublica
-    Ok "A  $Dominio -> $IpPublica"
-    Ok "A  www.$Dominio -> $IpPublica"
+    # Detrás de un router, los equipos de la red que usen este DNS deben llegar a la IP local
+    # (muchos routers no permiten entrar a su propia IP pública desde adentro). Internet usa el DNS de Hostinger.
+    $ipZona = if ($DnsPublico -or -not $detrasDeNat -or -not $ipLocal) { $IpPublica } else { $ipLocal }
+    Set-RegistroA '@' $ipZona
+    Set-RegistroA 'www' $ipZona
+    Ok "A  $Dominio -> $ipZona"
+    Ok "A  www.$Dominio -> $ipZona"
 
     if ($DnsPublico) {
         # Este servidor contesta por el dominio en Internet: ns1 y ns2 (Hostinger pide dos) apuntan aquí
@@ -273,7 +347,7 @@ if (-not $SinDns) {
     }
     Clear-DnsServerCache -Force -ErrorAction SilentlyContinue
     $local = @(Resolve-DnsName -Name $Dominio -Server 127.0.0.1 -Type A -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.Type -eq 'A' } | ForEach-Object IPAddress)
-    if ($local -contains $IpPublica) { Ok "El DNS de este servidor ya resuelve $Dominio -> $IpPublica" } else { Aviso "El DNS local aún no resuelve $Dominio" }
+    if ($local -contains $ipZona) { Ok "El DNS de este servidor ya resuelve $Dominio -> $ipZona" } else { Aviso "El DNS local aún no resuelve $Dominio" }
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -323,6 +397,71 @@ if (-not $BackendAzure) {
     Ok 'Dependencias instaladas'
 
     $envFile = Join-Path $RutaBackend '.env'
+    $sembrar = $false
+    if ($BdLocal) {
+        Paso 'Base de datos local: PostgreSQL'
+        $rutaBd = Join-Path $RutaBase 'bd'
+        New-Item -ItemType Directory -Force -Path $rutaBd | Out-Null
+        $archivoClavePg = Join-Path $rutaBd 'postgres.txt'
+        if (-not $ClavePostgres -and (Test-Path $archivoClavePg)) { $ClavePostgres = (Get-Content $archivoClavePg -Raw).Trim() }
+
+        $servicioPg = Get-Service -Name 'postgresql*' -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $servicioPg) {
+            if (-not $ClavePostgres) { $ClavePostgres = New-Clave }
+            # Se guarda antes de instalar para no perderla si algo falla después
+            Save-Privado $archivoClavePg $ClavePostgres
+            if (-not $InstaladorPostgres) {
+                $i = Find-InstaladorPostgres
+                $InstaladorPostgres = Get-Archivo $i.Url $i.Nombre
+            }
+            Write-Host '    Instalando PostgreSQL (tarda unos minutos)...'
+            $p = Start-Process $InstaladorPostgres -Wait -PassThru -ArgumentList @('--mode', 'unattended',
+                '--unattendedmodeui', 'none', '--superpassword', $ClavePostgres, '--serverport', '5432',
+                '--disable-components', 'pgAdmin,stackbuilder')
+            if ($p.ExitCode -ne 0) { throw "Falló la instalación de PostgreSQL (código $($p.ExitCode)). Revisa $env:TEMP\install-postgresql.log" }
+            $servicioPg = Get-Service -Name 'postgresql*' | Select-Object -First 1
+            Ok "PostgreSQL instalado (servicio $($servicioPg.Name))"
+        } else {
+            if (-not $ClavePostgres) {
+                throw "PostgreSQL ya estaba instalado ($($servicioPg.Name)). Pasa la contraseña del usuario postgres con -ClavePostgres"
+            }
+            Save-Privado $archivoClavePg $ClavePostgres
+            Ok "PostgreSQL ya estaba instalado ($($servicioPg.Name))"
+        }
+        if ($servicioPg.Status -ne 'Running') { Start-Service $servicioPg.Name }
+        $psql = Get-ChildItem 'C:\Program Files\PostgreSQL\*\bin\psql.exe' -ErrorAction SilentlyContinue |
+            Sort-Object { $_.Directory.Parent.Name -as [int] } -Descending | Select-Object -First 1 -ExpandProperty FullName
+        if (-not $psql) { throw 'No encuentro psql.exe en C:\Program Files\PostgreSQL' }
+        Wait-Postgres
+
+        # Solo acepta conexiones de este mismo servidor: la base no queda abierta a Internet
+        if ((Invoke-Psql 'SHOW listen_addresses') -ne 'localhost') {
+            Invoke-Psql "ALTER SYSTEM SET listen_addresses = 'localhost'" | Out-Null
+            Restart-Service $servicioPg.Name
+            Wait-Postgres
+        }
+        Ok 'PostgreSQL escucha solo en este servidor (puerto 5432 cerrado hacia afuera)'
+
+        $existeBd = (Invoke-Psql "SELECT 1 FROM pg_database WHERE datname = 'vinculatec'") -eq '1'
+        $envUsaLocal = (Test-Path $envFile) -and [bool]((Get-Content $envFile) -match '^DATABASE_URL=postgresql\+psycopg://vinculatec:[^@]+@127\.0\.0\.1:')
+        if ($existeBd -and $envUsaLocal) {
+            Ok 'La base vinculatec ya existía y el backend ya la usa'
+        } else {
+            $claveApp = New-Clave
+            if ((Invoke-Psql "SELECT 1 FROM pg_roles WHERE rolname = 'vinculatec'") -eq '1') {
+                Invoke-Psql "ALTER ROLE vinculatec WITH LOGIN PASSWORD '$claveApp'" | Out-Null
+            } else {
+                Invoke-Psql "CREATE ROLE vinculatec WITH LOGIN PASSWORD '$claveApp'" | Out-Null
+            }
+            if (-not $existeBd) {
+                Invoke-Psql "CREATE DATABASE vinculatec OWNER vinculatec ENCODING 'UTF8' TEMPLATE template0" | Out-Null
+                Ok 'Base vinculatec creada (usuario vinculatec)'
+            }
+            $DatabaseUrl = "postgresql+psycopg://vinculatec:$claveApp@127.0.0.1:5432/vinculatec?sslmode=disable"
+        }
+        $sembrar = -not (Test-Path (Join-Path $rutaBd 'datos-demo.ok'))
+    }
+
     if ($DatabaseUrl -or -not (Test-Path $envFile)) {
         if (-not $DatabaseUrl) {
             Write-Host '    Pega la conexión a Azure PostgreSQL (no se muestra al escribir):'
@@ -347,6 +486,14 @@ if (-not $BackendAzure) {
         icacls $envFile /inheritance:r /grant:r '*S-1-5-32-544:F' '*S-1-5-18:F' | Out-Null
         Ok '.env escrito'
     } else { Ok '.env ya existía (se conserva)' }
+
+    if ($sembrar) {
+        Write-Host '    Cargando datos de demostración (contraseña de esas cuentas: Demo12345)...'
+        Push-Location $RutaBackend
+        try { Invoke-Nativo $venvPy @('seed.py', '--borrar-todo') } finally { Pop-Location }
+        Write-Utf8 (Join-Path $RutaBase 'bd\datos-demo.ok') (Get-Date -Format s)
+        Ok 'Datos de demostración cargados'
+    }
 
     Paso "Servicio de Windows $Servicio"
     New-Item -ItemType Directory -Force -Path $RutaServicio | Out-Null
@@ -380,7 +527,7 @@ if (-not $BackendAzure) {
         Ok "Backend respondiendo en http://127.0.0.1:$PuertoApi"
     } else {
         Aviso "El backend no responde. Revisa $RutaLogs\$Servicio.err.log"
-        Aviso 'Causas típicas: DATABASE_URL mal escrita o el firewall de Azure PostgreSQL no permite la IP de este servidor.'
+        Aviso 'Causas típicas: DATABASE_URL mal escrita o la base no acepta la conexión (en Azure: su firewall no permite la IP de este servidor).'
     }
 }
 
@@ -500,6 +647,16 @@ $url = "$(if ($https) { 'https' } else { 'http' })://$Dominio"
 Write-Host ''
 Write-Host '============================================================' -ForegroundColor Green
 Write-Host " Sitio: $url" -ForegroundColor Green
-if (-not $BackendAzure) { Write-Host " API:   $url/docs  (backend local -> Azure PostgreSQL)" -ForegroundColor Green }
+if (-not $BackendAzure) { Write-Host " API:   $url/docs" -ForegroundColor Green }
+Write-Host " Base:  $(if ($BdLocal) { 'PostgreSQL en este servidor (solo accesible desde aquí)' } elseif ($BackendAzure) { 'la del backend de Azure' } else { 'Azure PostgreSQL' })" -ForegroundColor Green
 Write-Host " IP:    $IpPublica" -ForegroundColor Green
 Write-Host '============================================================' -ForegroundColor Green
+if ($detrasDeNat) {
+    Write-Host ''
+    Write-Host "Para que el sitio se vea desde Internet:" -ForegroundColor Yellow
+    Write-Host " - Router de casa o escuela: reenvía los puertos TCP 80 y 443 a $ipLocal$(if ($DnsPublico) { ', y TCP/UDP 53' })." -ForegroundColor Yellow
+    Write-Host "   Si la IP WAN que muestra el router no es $IpPublica (o empieza con 100.64 a 100.127)," -ForegroundColor Yellow
+    Write-Host '   tu proveedor usa CGNAT y no deja abrir puertos: pídele una IP pública.' -ForegroundColor Yellow
+    Write-Host ' - VM en la nube (Azure, AWS...): abre 80 y 443 en el firewall de red de la VM.' -ForegroundColor Yellow
+    Write-Host " - En Hostinger, los registros A de @ y www deben apuntar a $IpPublica." -ForegroundColor Yellow
+}

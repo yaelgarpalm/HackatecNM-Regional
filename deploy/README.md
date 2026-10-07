@@ -1,7 +1,8 @@
 # Publicar VinculaTec en cirus.online (Windows Server 2022 + Hostinger)
 
 La web se sirve desde el Windows Server 2022 con **IIS**, el dominio lo resuelve el **DNS** (de Hostinger o
-el del propio servidor) y los datos viven en la nube, en **Azure Database for PostgreSQL**.
+el del propio servidor) y los datos viven en **PostgreSQL**: en la nube (Azure) o instalado en el mismo
+servidor con `-BdLocal` (no necesita cuenta de Azure).
 
 ```
  Navegador ── https://cirus.online ──►  Windows Server 2022 (IP pública)
@@ -10,7 +11,8 @@ el del propio servidor) y los datos viven en la nube, en **Azure Database for Po
                                          │    ├─ /api, /docs  → proxy ARR → 127.0.0.1:8000
                                          │    └─ HTTPS gratis (Let's Encrypt con win-acme, se renueva solo)
                                          ├─ Servicio de Windows "cirus-api" (FastAPI + uvicorn)
-                                         │    └─────────────────────────────► Azure PostgreSQL (BD en la nube)
+                                         │    └──► PostgreSQL local (-BdLocal, 127.0.0.1:5432)
+                                         │         o Azure PostgreSQL
                                          └─ Servidor DNS: zona cirus.online (@, www y, opcional, ns1/ns2)
 ```
 
@@ -21,18 +23,34 @@ quieras; cada vez actualiza el sitio y conserva la configuración (`.env`, certi
 
 ## 1. Antes de empezar
 
-1. **IP pública fija del servidor.** Si la VM está en Azure: *Máquina virtual → Redes → IP pública →
-   Configuración → Asignación: **Estática***. Si cambia, el dominio deja de apuntar al servidor.
-2. **Firewall de la nube** (el de Windows lo abre el script). En Azure: *Máquina virtual → Redes →
-   Agregar regla de puerto de entrada*:
-   - TCP **80** y **443** (web y certificado).
-   - TCP y UDP **53**, solo si eliges la opción B de DNS (el servidor como DNS del dominio).
-3. **Azure PostgreSQL debe aceptar al servidor.** En el portal: *servidor PostgreSQL → Redes → Agregar
-   regla de firewall* con la IP pública del Windows Server.
-4. Ten a la mano la cadena de conexión (`DATABASE_URL`), la misma de `backend/.env`:
-   ```
-   postgresql+psycopg://USUARIO:CLAVE@SERVIDOR.postgres.database.azure.com:5432/vinculatec?sslmode=require
-   ```
+### Que el servidor se vea desde Internet
+
+El firewall de Windows lo abre el script; falta lo que está **antes** del servidor:
+
+- **Servidor en casa o en la escuela (detrás de un router):**
+  1. En la configuración del router busca *Reenvío de puertos / Port forwarding / Servidor virtual* y
+     reenvía **TCP 80** y **TCP 443** a la IP local del servidor (el script la muestra; también con
+     `ipconfig`). Con la opción B de DNS, también **TCP y UDP 53**.
+  2. Dale al servidor una IP local fija (reserva DHCP en el router) para que el reenvío no se pierda.
+  3. Compara la *IP WAN* que muestra el router con la que detecta el script. Si son distintas, o la del
+     router empieza con `100.64` a `100.127`, el proveedor usa **CGNAT** y no deja abrir puertos: pide
+     una IP pública a tu proveedor de Internet.
+  4. Si tu IP pública cambia, hay que actualizar los registros A en Hostinger.
+- **VM en la nube (Azure, AWS…):** deja la IP pública como **estática** y abre **TCP 80 y 443** (y 53 con
+  la opción B) en el firewall de red de la VM.
+
+### La base de datos
+
+- **Sin Azure (`-BdLocal`):** no necesitas nada. El script instala PostgreSQL 17 en el servidor, crea la
+  base `vinculatec` con su propio usuario y contraseña, guarda la conexión en `C:\cirus\backend\.env` y
+  carga los datos de demostración (contraseña de esas cuentas: `Demo12345`). PostgreSQL solo acepta
+  conexiones del mismo servidor: la página la usa a través del backend y el puerto 5432 no queda
+  abierto a Internet.
+- **Con Azure PostgreSQL:** ten a la mano la cadena de conexión (`DATABASE_URL`) y agrega la IP pública
+  del servidor en *servidor PostgreSQL → Redes → regla de firewall*:
+  ```
+  postgresql+psycopg://USUARIO:CLAVE@SERVIDOR.postgres.database.azure.com:5432/vinculatec?sslmode=require
+  ```
 
 ## 2. DNS del dominio en Hostinger
 
@@ -82,19 +100,20 @@ Get-ChildItem -Recurse C:\src\HackatecNM-Regional | Unblock-File
 
 ## 4. Correr el script
 
-Abre **PowerShell como Administrador**:
+Abre **PowerShell como Administrador**. Con la base en el mismo servidor:
 ```powershell
 cd C:\src\HackatecNM-Regional
-powershell -ExecutionPolicy Bypass -File .\deploy\windows\desplegar.ps1 -Correo tu@correo.com
+powershell -ExecutionPolicy Bypass -File .\deploy\windows\desplegar.ps1 -Correo tu@correo.com -BdLocal
 ```
-Con la opción B de DNS agrega `-DnsPublico`. La primera vez pide la `DATABASE_URL` (no se ve al escribir)
-y tarda de 10 a 20 minutos.
+Con Azure PostgreSQL, quita `-BdLocal`: la primera vez pide la `DATABASE_URL` (no se ve al escribir).
+Con la opción B de DNS agrega `-DnsPublico`. La primera vez tarda de 10 a 20 minutos.
 
 | Qué instala | Dónde |
 |---|---|
 | IIS, URL Rewrite y ARR (proxy inverso) | sitio `cirus` en `C:\inetpub\cirus` |
 | Servidor DNS | zona `cirus.online` |
 | Python 3.13 y el backend | `C:\cirus\backend` (su `.env` solo lo leen Administradores y SYSTEM) |
+| PostgreSQL 17, solo con `-BdLocal` | `C:\Program Files\PostgreSQL\17`; la contraseña del usuario `postgres` queda en `C:\cirus\bd\postgres.txt` (solo Administradores) |
 | Servicio `cirus-api` (WinSW, arranca con Windows y se reinicia si falla) | `C:\cirus\servicio`, logs en `C:\cirus\logs` |
 | Node.js LTS (solo para compilar la web) | `C:\Program Files\nodejs` |
 | win-acme (certificado HTTPS y su renovación automática) | `C:\cirus\win-acme` |
@@ -108,7 +127,7 @@ correrlo cuando propague y sacará el certificado (y activará la redirección a
 - API: https://cirus.online/health (debe decir `{"status":"ok"}`) y https://cirus.online/docs
 - DNS del servidor: `Resolve-DnsName cirus.online -Server 127.0.0.1`
 - DNS público: `Resolve-DnsName cirus.online -Server 8.8.8.8`
-- Servicio: `Get-Service cirus-api`
+- Servicio: `Get-Service cirus-api` (y `Get-Service postgresql*` con `-BdLocal`)
 
 ## 6. Actualizar el sitio
 
@@ -118,21 +137,34 @@ git pull
 powershell -ExecutionPolicy Bypass -File .\deploy\windows\desplegar.ps1
 ```
 
+## Respaldar la base local
+
+Con `-BdLocal` los datos solo existen en el servidor; respáldalos de vez en cuando:
+```powershell
+$env:PGPASSWORD = (Get-Content C:\cirus\bd\postgres.txt -Raw).Trim()
+& 'C:\Program Files\PostgreSQL\17\bin\pg_dump.exe' -h 127.0.0.1 -U postgres -Fc -f "C:\cirus\respaldo-$(Get-Date -Format yyyyMMdd).dump" vinculatec
+Remove-Item Env:PGPASSWORD
+```
+Para restaurar uno: `pg_restore -h 127.0.0.1 -U postgres -d vinculatec --clean C:\cirus\respaldo-AAAAMMDD.dump`.
+
 ## Opciones del script
 
 | Opción | Para qué |
 |---|---|
 | `-Correo` | Correo para Let's Encrypt (avisos de vencimiento) |
 | `-DnsPublico` | Opción B: este servidor es el DNS autoritativo del dominio |
-| `-DatabaseUrl "postgresql+psycopg://…"` | No preguntar la conexión (o cambiarla) |
+| `-BdLocal` | Instalar PostgreSQL en este servidor y usarlo (sin Azure) |
+| `-DatabaseUrl "postgresql+psycopg://…"` | Usar Azure u otra base sin que la pregunte (o cambiarla) |
+| `-InstaladorPostgres C:\ruta\postgresql-17….exe` | Si no se puede descargar PostgreSQL solo (bájalo de enterprisedb.com) |
+| `-ClavePostgres …` | Si PostgreSQL ya estaba instalado antes: contraseña de su usuario `postgres` |
 | `-IpPublica 1.2.3.4` | Si no detecta bien la IP pública |
 | `-Dominio otro.com` | Usar otro dominio |
 | `-BackendAzure` | Solo publica la web y usa el backend que ya está en Azure App Service (no instala Python, ARR ni el servicio). Requiere que el backend de Azure tenga el cambio de CORS de `cirus.online` (se despliega al hacer merge a `main`) |
 | `-SinHttps` | No sacar certificado |
 | `-SinDns` | No instalar ni tocar el rol DNS |
 
-La app móvil no cambia: sigue usando el backend de Azure App Service. Las dos versiones comparten la misma
-base de datos de Azure.
+La app móvil no cambia: sigue usando el backend de Azure App Service. Si la web usa Azure PostgreSQL, las
+dos comparten los datos; con `-BdLocal` la web tiene su propia base, separada de la de la app.
 
 ## Problemas comunes
 
@@ -142,5 +174,7 @@ base de datos de Azure.
 | `/api/...` da error 502 | El servicio `cirus-api` está detenido: `Start-Service cirus-api` y revisa el log. |
 | `remaining connection slots are reserved` | Demasiadas conexiones al plan básico de Azure; ver `backend/README.md`. |
 | No sale el certificado | El dominio no apunta aún a la IP (espera la propagación), hay registros AAAA, o el puerto 80 está cerrado en el firewall de la nube. Corrige y vuelve a correr el script. |
-| Desde fuera no abre, pero en el servidor sí | Falta abrir 80/443 en el firewall de la nube (en Azure, el grupo de seguridad de red). |
+| Desde fuera no abre, pero en el servidor sí | Falta el reenvío de puertos 80/443 en el router (o abrirlos en el firewall de la nube), o hay CGNAT (ver sección 1). |
+| Desde la misma red no abre, pero desde el celular con datos sí | El router no permite entrar a su propia IP pública desde adentro. Usa este servidor como DNS en los equipos de la red: su zona apunta a la IP local. |
+| El script dice que no encontró el instalador de PostgreSQL | Descárgalo de enterprisedb.com (Windows x86-64, versión 17) y pásalo con `-InstaladorPostgres`. |
 | Error al descargar URL Rewrite o ARR | Instálalos a mano desde iis.net (*URL Rewrite 2.1* y *Application Request Routing 3.0*) y vuelve a correr el script. |
