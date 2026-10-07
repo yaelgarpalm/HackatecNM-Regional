@@ -137,6 +137,27 @@ git pull
 powershell -ExecutionPolicy Bypass -File .\deploy\windows\desplegar.ps1
 ```
 
+## VPN de Windows Server y SSH
+
+**SSH** (servidor OpenSSH que trae Windows), una vez, como Administrador:
+```powershell
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+Set-Service sshd -StartupType Automatic
+Start-Service sshd
+```
+
+**VPN** (rol *Enrutamiento y acceso remoto*, L2TP/IPsec con clave compartida):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\windows\vpn.ps1
+```
+Crea el usuario `vpncirus` (pide su contraseña), genera la clave compartida (`C:\cirus\vpn\clave-compartida.txt`)
+y al final muestra el comando `Add-VpnConnection` para la computadora cliente. Dentro de la VPN el servidor
+es `10.10.10.1`, así que conectado a la VPN: `ssh Administrator@10.10.10.1`.
+
+Desde fuera de tu red: reenvía **UDP 500 y 4500** del router al servidor y, en cada cliente Windows, pon
+`AssumeUDPEncapsulationContextOnSendRule = 2` (el script muestra el comando) y reinicia. Android 12 o más
+nuevo ya no trae L2TP.
+
 ## Respaldar la base local
 
 Con `-BdLocal` los datos solo existen en el servidor; respáldalos de vez en cuando:
