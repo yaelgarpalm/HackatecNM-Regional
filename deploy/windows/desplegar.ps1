@@ -182,6 +182,25 @@ function Wait-Postgres {
     throw 'PostgreSQL no responde en 127.0.0.1:5432'
 }
 
+function Stop-Backend {
+    # Detiene el backend para actualizarlo. Lo deshabilita mientras tanto: el servicio está configurado
+    # para reiniciarse solo si falla, y no debe volver a arrancar a la mitad de la copia.
+    if (-not (Get-Service $Servicio -ErrorAction SilentlyContinue)) { return }
+    Set-Service $Servicio -StartupType Disabled
+    try {
+        Stop-Service $Servicio -Force -ErrorAction Stop
+    } catch {
+        Aviso "El servicio no se detuvo normalmente ($($_.Exception.Message)); lo cierro a la fuerza"
+    }
+    $pidServicio = (Get-CimInstance Win32_Service -Filter "Name='$Servicio'").ProcessId
+    if ($pidServicio) { Stop-Process -Id $pidServicio -Force -ErrorAction SilentlyContinue }
+    # El python del entorno virtual lanza otro python; se buscan los dos por su línea de comandos
+    Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object { $_.CommandLine -like '*uvicorn app.main:app*' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Start-Sleep -Seconds 2
+}
+
 function Wait-Url([string]$Url, [string]$HostHeader, [int]$Segundos = 90) {
     # Espera a que la URL conteste (2xx o redirección). HttpWebRequest deja fijar el Host
     # para probar el sitio de IIS aunque el dominio todavía no resuelva a este servidor.
@@ -380,10 +399,7 @@ if (-not $BackendAzure) {
 
     Paso "Backend en $RutaBackend"
     $winsw = Join-Path $RutaServicio "$Servicio.exe"
-    if (Get-Service $Servicio -ErrorAction SilentlyContinue) {
-        Stop-Service $Servicio -Force
-        Start-Sleep -Seconds 2
-    }
+    Stop-Backend
     # Copia el código (sin el entorno virtual ni el .env, que se quedan en el servidor)
     robocopy (Join-Path $Repo 'backend') $RutaBackend /MIR /NFL /NDL /NJH /NJS /NP /XD .venv __pycache__ .pytest_cache /XF .env *.db | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy falló copiando el backend (código $LASTEXITCODE)" }
@@ -522,11 +538,18 @@ if (-not $BackendAzure) {
     Set-Content -Path (Join-Path $RutaServicio "$Servicio.xml") -Value $xml -Encoding UTF8
     # WinSW lee el XML cada vez que arranca el servicio: basta con instalarlo una vez y reiniciarlo
     if (-not (Get-Service $Servicio -ErrorAction SilentlyContinue)) { Invoke-Nativo $winsw @('install') }
+    $ocupado = Get-NetTCPConnection -LocalPort $PuertoApi -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($ocupado) {
+        Aviso "Otro programa ya usa el puerto $PuertoApi`: $((Get-Process -Id $ocupado.OwningProcess -ErrorAction SilentlyContinue).ProcessName) (PID $($ocupado.OwningProcess)). Ciérralo o el backend no podrá arrancar."
+    }
+    Set-Service $Servicio -StartupType Automatic
     Start-Service $Servicio
     if (Wait-Url "http://127.0.0.1:$PuertoApi/health") {
         Ok "Backend respondiendo en http://127.0.0.1:$PuertoApi"
     } else {
-        Aviso "El backend no responde. Revisa $RutaLogs\$Servicio.err.log"
+        Aviso "El backend no responde. Últimas líneas de $RutaLogs\$Servicio.err.log:"
+        $logError = Join-Path $RutaLogs "$Servicio.err.log"
+        if (Test-Path $logError) { Get-Content $logError -Tail 15 | ForEach-Object { Write-Host "      $_" } }
         Aviso 'Causas típicas: DATABASE_URL mal escrita o la base no acepta la conexión (en Azure: su firewall no permite la IP de este servidor).'
     }
 }
