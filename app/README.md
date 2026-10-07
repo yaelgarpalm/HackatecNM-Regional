@@ -49,6 +49,8 @@ npm run build:web        # genera la versión web estática en dist/ (se puede s
 npx eas-cli build -p android --profile preview   # APK instalable (requiere cuenta gratuita de Expo)
 ```
 
+Para publicar la web en **cirus.online** (Windows Server 2022 con IIS y DNS), ver [`../deploy/README.md`](../deploy/README.md).
+
 ## Estructura
 
 ```
