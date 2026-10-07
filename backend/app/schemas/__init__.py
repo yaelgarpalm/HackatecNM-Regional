@@ -199,6 +199,19 @@ class UserOut(UserPublic):
     created_at: datetime
 
 
+# ---------------------------------------------------------------- Administración
+class AdminUniversity(OrganizationOut):
+    """Universidad con cuántas personas y carreras tiene registradas (solo para el administrador)."""
+    students: int = 0
+    academics: int = 0
+    careers: int = 0
+
+
+class AdminUser(UserOut):
+    """Persona registrada con el nombre de su organización (solo para el administrador)."""
+    organization_name: str | None = None
+
+
 # ---------------------------------------------------------------- Capacidades
 class CapabilityBase(BaseModel):
     type: CapabilityType

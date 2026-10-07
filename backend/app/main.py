@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 import app.models  # noqa: F401  (registra los modelos en Base.metadata)
 from app.core.config import settings
 from app.core.database import Base, add_missing_columns, engine
-from app.routers import auth, challenges, insights, organizations, teams, users
+from app.routers import admin, auth, challenges, insights, organizations, teams, users
 
 
 @asynccontextmanager
@@ -95,7 +95,8 @@ async def integrity_handler(_: Request, exc: IntegrityError):
     return JSONResponse(status_code=409, content={"detail": "Conflicto de datos: registro duplicado o relación inválida"})
 
 
-for r in (auth.router, users.router, organizations.router, challenges.router, teams.router, insights.router):
+for r in (auth.router, users.router, organizations.router, challenges.router, teams.router, insights.router,
+          admin.router):
     app.include_router(r, prefix=settings.API_PREFIX)
 
 

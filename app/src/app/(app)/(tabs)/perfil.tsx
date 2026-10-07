@@ -85,6 +85,7 @@ export default function Perfil() {
           <LinkRow icon="ribbon-outline" text="Mi portafolio y evaluaciones" href={`/usuario/${user.id}`} />
           {user.organization_id && <LinkRow icon="business-outline" text="Mi organización" href="/mi-organizacion" />}
           {user.role === 'universidad' && <LinkRow icon="school-outline" text="Carreras que ofrecemos" href="/mis-carreras" />}
+          {user.role === 'admin' && <LinkRow icon="school-outline" text="Universidades y alumnos registrados" href="/registrados" />}
           <LinkRow icon="stats-chart-outline" text="Indicadores de la plataforma" href="/indicadores" />
           <LinkRow icon="globe-outline" text={user.role === 'admin' ? 'Verificar organizaciones' : 'Directorio de organizaciones'} href="/organizaciones" />
         </Card>

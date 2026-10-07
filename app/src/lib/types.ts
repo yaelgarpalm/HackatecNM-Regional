@@ -59,6 +59,18 @@ export interface Organization {
   longitude: number | null;
 }
 
+/** Solo para el administrador: universidad con sus registros. */
+export interface AdminUniversity extends Organization {
+  students: number;
+  academics: number;
+  careers: number;
+}
+
+/** Solo para el administrador: persona registrada con el nombre de su organización. */
+export interface AdminUser extends User {
+  organization_name: string | null;
+}
+
 export interface NearbyOrganization extends Organization {
   distance_km: number;
   capabilities: number;

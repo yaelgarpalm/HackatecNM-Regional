@@ -160,7 +160,8 @@ function AdminHome({ user }: { user: User }) {
     <Screen>
       <Hello user={user} text="Panel de control administrativo y auditoría de vinculación." />
       <Row style={{ marginTop: 16 }}>
-        <Button title="Verificar organizaciones" icon="shield-checkmark-outline" onPress={() => router.push('/organizaciones')} />
+        <Button title="Universidades y alumnos" icon="school-outline" onPress={() => router.push('/registrados')} />
+        <Button title="Verificar organizaciones" variant="secondary" icon="shield-checkmark-outline" onPress={() => router.push('/organizaciones')} />
         <Button title="Indicadores de impacto" variant="secondary" icon="stats-chart-outline" onPress={() => router.push('/indicadores')} />
       </Row>
     </Screen>

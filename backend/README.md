@@ -52,6 +52,7 @@ uvicorn app.main:app --reload --host 0.0.0.0
 | Evaluaciones | `POST /challenges/{id}/reviews` |
 | Recomendaciones | `GET /recommendations/challenges` · `GET /challenges/{id}/matches/capabilities` · `GET /challenges/{id}/matches/talent` |
 | Indicadores | `GET /stats` · `GET /stats/university/{id}` · `GET /catalogs` |
+| Administración (solo admin) | `GET /admin/universities?q=` (universidades con alumnos, académicos y carreras) · `GET /admin/users?role=&organization_id=&q=` (personas registradas con correo y organización) |
 
 Flujo de un reto: `borrador → abierto → en_progreso (al aceptar una propuesta) → finalizado | cancelado`.
 

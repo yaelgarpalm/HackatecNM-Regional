@@ -362,3 +362,43 @@ def test_mapa_universidades_cercanas(client):
     assert [o["name"] for o in todas][:2] == ["Tec Cercano", "Tec Lejano"]  # de la más cercana a la más lejana
     # Nadie cambia la ubicación de otra organización
     assert c.patch(f"{API}/organizations/{cerca['organization_id']}", headers=h_emp, json={"latitude": 0}).status_code == 403
+
+
+def test_admin_ve_universidades_y_alumnos(client):
+    c = client
+    from app.core.database import SessionLocal
+    from app.core.security import hash_password
+    from app.models import User
+    from app.models.enums import Role
+
+    with SessionLocal() as db:
+        db.add(User(email="admin@prueba.mx", full_name="Admin", role=Role.ADMIN, hashed_password=hash_password("Secreta123")))
+        db.commit()
+    adm = login(c, "admin@prueba.mx")
+
+    uni = register(c, email="vinculacion@uaem.mx", full_name="Vinculación UAEM", role="universidad",
+                   organization={"name": "Universidad Autónoma del Estado de México", "type": "universidad",
+                                 "city": "Toluca", "state": "Estado de México"})
+    uni_id = uni["organization_id"]
+    register(c, email="carla@uaem.mx", full_name="Carla Gómez", role="estudiante", organization_id=uni_id,
+             career="Licenciatura en Diseño Gráfico", semester=8)
+    est = login(c, "carla@uaem.mx")
+
+    # Solo el administrador puede consultarlo
+    assert c.get(f"{API}/admin/universities", headers=est).status_code == 403
+    assert c.get(f"{API}/admin/users", headers=est).status_code == 403
+
+    unis = c.get(f"{API}/admin/universities", headers=adm, params={"q": "autonoma toluca"}).json()
+    assert [u["name"] for u in unis] == ["Universidad Autónoma del Estado de México"]
+    assert unis[0]["students"] == 1 and unis[0]["academics"] == 0
+
+    alumnos = c.get(f"{API}/admin/users", headers=adm, params={"role": "estudiante", "organization_id": uni_id}).json()
+    assert alumnos["total"] == 1
+    carla = alumnos["items"][0]
+    assert carla["email"] == "carla@uaem.mx"
+    assert carla["organization_name"] == "Universidad Autónoma del Estado de México"
+    assert "hashed_password" not in carla
+
+    # Buscar por universidad o correo, sin acentos; nunca aparecen administradores
+    assert c.get(f"{API}/admin/users", headers=adm, params={"q": "autonoma"}).json()["total"] == 2
+    assert c.get(f"{API}/admin/users", headers=adm, params={"q": "admin@prueba"}).json()["total"] == 0
