@@ -33,9 +33,9 @@ class Settings(BaseSettings):
         "http://localhost:8081",
     ]
     # En desarrollo acepta cualquier puerto de localhost y de la red local (Expo web, pruebas desde el celular),
-    # y la web publicada en cirus.online (deploy/windows) cuando llama a este backend en Azure
+    # y la web publicada en cirus.site (deploy/windows) cuando llama a este backend en Azure
     CORS_ORIGIN_REGEX: str | None = (
-        r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|(www\.)?cirus\.online)(:\d+)?"
+        r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|(www\.)?cirus\.site)(:\d+)?"
     )
 
 

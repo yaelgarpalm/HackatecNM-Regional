@@ -34,7 +34,7 @@
 [CmdletBinding()]
 param(
     # Dominio comprado en Hostinger
-    [string]$Dominio = 'cirus.online',
+    [string]$Dominio = 'cirus.site',
     # IP pública del servidor. Si no se da, se detecta sola.
     [string]$IpPublica,
     # Correo para Let's Encrypt (avisos de vencimiento del certificado)
@@ -580,6 +580,24 @@ if (-not (Get-Website -Name $NombreSitio)) {
     New-Website -Name $NombreSitio -Id $id -PhysicalPath $RutaWeb -ApplicationPool $NombreSitio -HostHeader $Dominio -Port 80 | Out-Null
 }
 Set-ItemProperty "IIS:\Sites\$NombreSitio" -Name physicalPath -Value $RutaWeb
+
+function Get-HostDeBinding($Binding) { return ($Binding.bindingInformation -split ':')[-1] }
+# Este sitio atiende solo el dominio configurado: quita los que tuviera de una corrida anterior con otro -Dominio
+foreach ($b in @(Get-WebBinding -Name $NombreSitio)) {
+    $h = Get-HostDeBinding $b
+    if ($h -and $h -notin $Hosts) {
+        $b | Remove-WebBinding
+        Aviso "Quité $($b.protocol)://$h de este sitio (ya no es el dominio configurado)"
+    }
+}
+# Si otro sitio de IIS atendía este dominio (por ejemplo, una página anterior), ahora lo atiende este.
+# Los archivos de ese otro sitio no se tocan.
+foreach ($otro in @(Get-Website | Where-Object { $_.Name -ne $NombreSitio })) {
+    foreach ($b in @(Get-WebBinding -Name $otro.Name | Where-Object { (Get-HostDeBinding $_) -in $Hosts })) {
+        $b | Remove-WebBinding
+        Aviso "El sitio '$($otro.Name)' ($($otro.physicalPath)) atendía $($b.protocol)://$(Get-HostDeBinding $b); ahora lo atiende '$NombreSitio'"
+    }
+}
 foreach ($h in $Hosts) {
     if (-not (Get-WebBinding -Name $NombreSitio -Protocol http -HostHeader $h)) {
         New-WebBinding -Name $NombreSitio -Protocol http -Port 80 -HostHeader $h
@@ -606,12 +624,12 @@ if (-not $BackendAzure) {
 if (-not $SinHttps) {
     Paso 'Certificado HTTPS (Let''s Encrypt)'
     $listos = @($Hosts | Where-Object { (Get-IpDnsPublico $_) -contains $IpPublica })
-    $conAaaa = @($Hosts | Where-Object { Get-TieneAaaa $_ })
-    if ($listos.Count -ne $Hosts.Count) {
-        foreach ($h in $Hosts) {
-            $ips = Get-IpDnsPublico $h
-            Aviso "$h apunta a: $(if ($ips) { $ips -join ', ' } else { '(nada)' }); debe apuntar a $IpPublica"
-        }
+    $conAaaa = @($listos | Where-Object { Get-TieneAaaa $_ })
+    foreach ($h in $Hosts | Where-Object { $_ -notin $listos }) {
+        $ips = Get-IpDnsPublico $h
+        Aviso "$h apunta a: $(if ($ips) { $ips -join ', ' } else { '(nada)' }); debe apuntar a $IpPublica"
+    }
+    if (-not $listos.Count) {
         Aviso 'Configura el DNS en Hostinger (ver deploy\README.md) y vuelve a correr el script cuando propague.'
     } elseif ($conAaaa.Count) {
         Aviso "Hay registros AAAA (IPv6) en: $($conAaaa -join ', '). Bórralos en Hostinger: Let's Encrypt los usaría y fallaría."
@@ -626,7 +644,8 @@ if (-not $SinHttps) {
             Expand-Archive -Path $zip -DestinationPath $RutaWacs -Force
         }
         $siteId = (Get-Website -Name $NombreSitio).id
-        $argsWacs = @('--source', 'iis', '--siteid', "$siteId", '--host', ($Hosts -join ','),
+        if ($listos.Count -lt $Hosts.Count) { Aviso "Saco el certificado solo para: $($listos -join ', '). Vuelve a correr el script cuando los demás apunten aquí." }
+        $argsWacs = @('--source', 'iis', '--siteid', "$siteId", '--host', ($listos -join ','),
             '--installation', 'iis', '--accepttos', '--closeonfinish')
         if ($Correo) { $argsWacs += @('--emailaddress', $Correo) }
         $antes = $ErrorActionPreference

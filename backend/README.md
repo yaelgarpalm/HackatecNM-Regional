@@ -128,10 +128,10 @@ reinicio de `--reload` puede dejar conexiones huérfanas. La base `vinculatec` l
 de inactividad (`idle_session_timeout`); si urge liberarlas, en el portal de Azure → **Reiniciar** el servidor,
 o ejecuta en la base: `select pg_terminate_backend(pid) from pg_stat_activity where usename = current_user and state = 'idle' and pid <> pg_backend_pid();`
 
-## Publicar en cirus.online (Windows Server 2022)
+## Publicar en cirus.site (Windows Server 2022)
 
 El backend también puede correr como servicio de Windows detrás de IIS, junto con la web, en el dominio
-`cirus.online` y usando esta misma base de Azure. Ver [`../deploy/README.md`](../deploy/README.md).
+`cirus.site` y usando esta misma base de Azure. Ver [`../deploy/README.md`](../deploy/README.md).
 
 ## Frontend
 

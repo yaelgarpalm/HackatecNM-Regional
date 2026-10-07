@@ -1,11 +1,11 @@
-# Publicar VinculaTec en cirus.online (Windows Server 2022 + Hostinger)
+# Publicar VinculaTec en cirus.site (Windows Server 2022 + Hostinger)
 
 La web se sirve desde el Windows Server 2022 con **IIS**, el dominio lo resuelve el **DNS** (de Hostinger o
 el del propio servidor) y los datos viven en **PostgreSQL**: en la nube (Azure) o instalado en el mismo
 servidor con `-BdLocal` (no necesita cuenta de Azure).
 
 ```
- Navegador ── https://cirus.online ──►  Windows Server 2022 (IP pública)
+ Navegador ── https://cirus.site ──►  Windows Server 2022 (IP pública)
                                          ├─ IIS, sitio "cirus" (C:\inetpub\cirus)
                                          │    ├─ /            → web compilada (Expo, SPA)
                                          │    ├─ /api, /docs  → proxy ARR → 127.0.0.1:8000
@@ -13,7 +13,7 @@ servidor con `-BdLocal` (no necesita cuenta de Azure).
                                          ├─ Servicio de Windows "cirus-api" (FastAPI + uvicorn)
                                          │    └──► PostgreSQL local (-BdLocal, 127.0.0.1:5432)
                                          │         o Azure PostgreSQL
-                                         └─ Servidor DNS: zona cirus.online (@, www y, opcional, ns1/ns2)
+                                         └─ Servidor DNS: zona cirus.site (@, www y, opcional, ns1/ns2)
 ```
 
 Todo lo hace un solo script: [`windows/desplegar.ps1`](windows/desplegar.ps1). Se puede correr las veces que
@@ -54,7 +54,7 @@ El firewall de Windows lo abre el script; falta lo que está **antes** del servi
 
 ## 2. DNS del dominio en Hostinger
 
-Entra a **hPanel → Dominios → cirus.online → DNS / Nameservers**. Elige **una** de las dos opciones.
+Entra a **hPanel → Dominios → cirus.site → DNS / Nameservers**. Elige **una** de las dos opciones.
 
 ### Opción A (recomendada): Hostinger resuelve el dominio y apunta al servidor
 
@@ -69,19 +69,19 @@ En **Registros DNS** deja solo esto para `@` y `www` (borra los registros de "pa
 - Si `www` es un CNAME, bórralo antes de crear el A (no pueden coexistir).
 - Los nameservers deben seguir siendo los de Hostinger (p. ej. `ns1.dns-parking.com`, `ns2.dns-parking.com`).
 
-El script igual crea la zona `cirus.online` en el **Servidor DNS de Windows** con los mismos registros: la
+El script igual crea la zona `cirus.site` en el **Servidor DNS de Windows** con los mismos registros: la
 usan los equipos de la red interna que tengan este servidor como DNS.
 
 ### Opción B: el Windows Server es el DNS del dominio
 
-Así Internet le pregunta a **tu** servidor por `cirus.online`. El servidor debe estar encendido siempre
+Así Internet le pregunta a **tu** servidor por `cirus.site`. El servidor debe estar encendido siempre
 (si se apaga, el dominio deja de existir) y lo que tuvieras en el DNS de Hostinger (correo, MX, etc.)
 hay que crearlo en el DNS de Windows.
 
 1. En **DNS / Nameservers → Nameservers secundarios (child nameservers)** crea:
-   - `ns1.cirus.online` → IP pública del servidor
-   - `ns2.cirus.online` → la misma IP (Hostinger pide dos)
-2. En **Cambiar nameservers → Usar nameservers personalizados** pon `ns1.cirus.online` y `ns2.cirus.online`.
+   - `ns1.cirus.site` → IP pública del servidor
+   - `ns2.cirus.site` → la misma IP (Hostinger pide dos)
+2. En **Cambiar nameservers → Usar nameservers personalizados** pon `ns1.cirus.site` y `ns2.cirus.site`.
 3. Corre el script con `-DnsPublico` (crea ns1/ns2, los registros NS y SOA, abre el puerto 53 y apaga
    la recursión para no ser un DNS abierto).
 
@@ -111,7 +111,7 @@ Con la opción B de DNS agrega `-DnsPublico`. La primera vez tarda de 10 a 20 mi
 | Qué instala | Dónde |
 |---|---|
 | IIS, URL Rewrite y ARR (proxy inverso) | sitio `cirus` en `C:\inetpub\cirus` |
-| Servidor DNS | zona `cirus.online` |
+| Servidor DNS | zona `cirus.site` |
 | Python 3.13 y el backend | `C:\cirus\backend` (su `.env` solo lo leen Administradores y SYSTEM) |
 | PostgreSQL 17, solo con `-BdLocal` | `C:\Program Files\PostgreSQL\17`; la contraseña del usuario `postgres` queda en `C:\cirus\bd\postgres.txt` (solo Administradores) |
 | Servicio `cirus-api` (WinSW, arranca con Windows y se reinicia si falla) | `C:\cirus\servicio`, logs en `C:\cirus\logs` |
@@ -123,10 +123,10 @@ correrlo cuando propague y sacará el certificado (y activará la redirección a
 
 ## 5. Comprobar
 
-- Web: https://cirus.online y https://www.cirus.online
-- API: https://cirus.online/health (debe decir `{"status":"ok"}`) y https://cirus.online/docs
-- DNS del servidor: `Resolve-DnsName cirus.online -Server 127.0.0.1`
-- DNS público: `Resolve-DnsName cirus.online -Server 8.8.8.8`
+- Web: https://cirus.site y https://www.cirus.site
+- API: https://cirus.site/health (debe decir `{"status":"ok"}`) y https://cirus.site/docs
+- DNS del servidor: `Resolve-DnsName cirus.site -Server 127.0.0.1`
+- DNS público: `Resolve-DnsName cirus.site -Server 8.8.8.8`
 - Servicio: `Get-Service cirus-api` (y `Get-Service postgresql*` con `-BdLocal`)
 
 ## 6. Actualizar el sitio
@@ -159,7 +159,7 @@ Para restaurar uno: `pg_restore -h 127.0.0.1 -U postgres -d vinculatec --clean C
 | `-ClavePostgres …` | Si PostgreSQL ya estaba instalado antes: contraseña de su usuario `postgres` |
 | `-IpPublica 1.2.3.4` | Si no detecta bien la IP pública |
 | `-Dominio otro.com` | Usar otro dominio |
-| `-BackendAzure` | Solo publica la web y usa el backend que ya está en Azure App Service (no instala Python, ARR ni el servicio). Requiere que el backend de Azure tenga el cambio de CORS de `cirus.online` (se despliega al hacer merge a `main`) |
+| `-BackendAzure` | Solo publica la web y usa el backend que ya está en Azure App Service (no instala Python, ARR ni el servicio). Requiere que el backend de Azure tenga el cambio de CORS de `cirus.site` (se despliega al hacer merge a `main`) |
 | `-SinHttps` | No sacar certificado |
 | `-SinDns` | No instalar ni tocar el rol DNS |
 
