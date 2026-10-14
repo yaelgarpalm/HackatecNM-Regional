@@ -1,5 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { useApi, useCatalogs } from '@/components/hooks';
@@ -19,6 +21,7 @@ export default function Retos() {
   const [state, setState] = useState('');
   const [mine, setMine] = useState(false);
   const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const query = {
     q: search, status, modality, state, mine: mine || undefined, page, size: 20,
@@ -26,13 +29,19 @@ export default function Retos() {
   const r = useApi<Page<Challenge>>('/challenges', query);
 
   const statuses = (cat?.estados_reto ?? []).filter((s) => mine || s !== 'borrador');
+  const activeFilters = Number(!!status) + Number(!!modality) + Number(!!state) + Number(mine);
+  const clearFilters = () => {
+    setQ(''); setSearch(''); setStatus(null); setModality(null); setState(''); setMine(false); setPage(1);
+  };
 
   return (
     <Screen onRefresh={r.refetch} refreshing={r.isRefetching}>
-      <Row style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-        <Muted>Problemáticas reales publicadas por empresas y gobierno</Muted>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Muted>Problemáticas reales publicadas por empresas y gobierno</Muted>
+        </View>
         {isOrgPublisher(user) && (
-          <Button small title="Publicar problemática" icon="add" onPress={() => router.push('/publicar')} />
+          <Button small title="Publicar" icon="add" onPress={() => router.push('/publicar')} />
         )}
       </Row>
 
@@ -50,23 +59,42 @@ export default function Retos() {
         </Card>
       )}
 
-      <Field label="Buscar" value={q} onChangeText={setQ} placeholder="IoT, comercio electrónico, agua…"
-        returnKeyType="search" onSubmitEditing={() => { setSearch(q); setPage(1); }} />
-      <Row gap={8} style={{ marginTop: -4, marginBottom: 8 }}>
-        <Button small title="Buscar" icon="search" onPress={() => { setSearch(q); setPage(1); }} />
-        {isOrgPublisher(user) && (
-          <Button small variant={mine ? 'primary' : 'secondary'} title="Solo mis problemáticas"
-            onPress={() => { setMine(!mine); setStatus(null); setPage(1); }} />
-        )}
-      </Row>
+      <Card style={{ padding: 16 }}>
+        <Field label="Buscar oportunidades" value={q} onChangeText={setQ} placeholder="IoT, comercio electrónico, agua…"
+          returnKeyType="search" onSubmitEditing={() => { setSearch(q); setPage(1); }} />
+        <Row gap={8} style={{ flexWrap: 'nowrap' }}>
+          <Button title="Buscar" icon="search" onPress={() => { setSearch(q); setPage(1); }} style={{ flex: 1 }} />
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: filtersOpen }}
+            onPress={() => setFiltersOpen((open) => !open)}
+            style={({ pressed }) => ({ minHeight: 48, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
+              borderRadius: 999, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+              opacity: pressed ? 0.8 : 1 })}>
+            <Ionicons name="options-outline" size={18} color={colors.primary} />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>
+              {activeFilters ? `Filtros · ${activeFilters}` : 'Filtros'}
+            </Text>
+          </Pressable>
+        </Row>
 
-      <ChipSelect label="Estado" options={statuses} value={status} onChange={(v) => { setStatus(v); setPage(1); }} />
-      <ChipSelect label="Válido como" options={cat?.modalidades ?? []} value={modality} onChange={(v) => { setModality(v); setPage(1); }} />
-      <Field label="Estado de la República" value={state} onChangeText={(v) => { setState(v); setPage(1); }} placeholder="Estado de México" />
+        {filtersOpen && (
+          <View style={{ marginTop: 16 }}>
+            <ChipSelect label="Estado" options={statuses} value={status} onChange={(v) => { setStatus(v); setPage(1); }} />
+            <ChipSelect label="Modalidad" options={cat?.modalidades ?? []} value={modality} onChange={(v) => { setModality(v); setPage(1); }} />
+            <Field label="Estado de la República" value={state} onChangeText={(v) => { setState(v); setPage(1); }} placeholder="Estado de México" />
+            {isOrgPublisher(user) && (
+              <Button small variant={mine ? 'primary' : 'secondary'} title="Solo mis problemáticas"
+                icon={mine ? 'checkmark-circle' : 'business-outline'}
+                onPress={() => { setMine(!mine); setStatus(null); setPage(1); }} style={{ alignSelf: 'flex-start' }} />
+            )}
+            {!!activeFilters && <Button small variant="ghost" title="Limpiar filtros" icon="close-circle-outline"
+              onPress={clearFilters} style={{ alignSelf: 'flex-start', marginTop: 8 }} />}
+          </View>
+        )}
+      </Card>
 
       {r.isLoading ? <Loading /> : r.error ? <ErrorView error={r.error} onRetry={r.refetch} /> : (
         <>
-          <Muted style={{ marginBottom: 8 }}>{r.data?.total ?? 0} resultado(s)</Muted>
+          <Muted style={{ marginBottom: 8, marginTop: 4 }}>{r.data?.total ?? 0} oportunidades encontradas</Muted>
           {!r.data?.items.length ? <Empty text="No hay problemáticas con esos filtros." icon="search-outline" /> :
             r.data.items.map((c) => <ChallengeCard key={c.id} ch={c} />)}
           {(r.data?.pages ?? 0) > 1 && (

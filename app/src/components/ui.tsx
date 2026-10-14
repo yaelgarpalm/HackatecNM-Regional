@@ -1,14 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ComponentProps, ReactNode } from 'react';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import {
-  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
-  TextInput, View, type StyleProp, type TextInputProps, type ViewStyle,
+  AccessibilityInfo, ActivityIndicator, Animated, Platform, Pressable, RefreshControl, ScrollView,
+  StyleSheet, Text, TextInput, View, useWindowDimensions,
+  type StyleProp, type TextInputProps, type ViewStyle,
 } from 'react-native';
 
 import { label } from '@/lib/format';
 import { colors, MAX_WIDTH, radius } from './theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
+
+export function blurFocusedElementOnWeb() {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  const active = document.activeElement;
+  if (active instanceof HTMLElement) active.blur();
+}
 
 // ---------------------------------------------------------------- Diálogos (ventanas propias de la app)
 export { confirm, notify } from './dialogs';
@@ -23,12 +30,47 @@ export function Screen({
   scroll?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const inner = <View style={[s.inner, style]}>{children}</View>;
+  const { width } = useWindowDimensions();
+  const [entranceOpacity] = useState(() => new Animated.Value(1));
+
+  useEffect(() => {
+    let mounted = true;
+    const applyMotionPreference = (reduceMotion: boolean) => {
+      if (!mounted) return;
+      if (reduceMotion) {
+        entranceOpacity.stopAnimation();
+        entranceOpacity.setValue(1);
+        return;
+      }
+      entranceOpacity.setValue(0);
+      Animated.timing(entranceOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: Platform.OS !== 'web',
+      }).start();
+    };
+
+    AccessibilityInfo.isReduceMotionEnabled().then(applyMotionPreference).catch(() => entranceOpacity.setValue(1));
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', applyMotionPreference);
+    return () => {
+      mounted = false;
+      subscription.remove();
+      entranceOpacity.stopAnimation();
+    };
+  }, [entranceOpacity]);
+
+  const inner = (
+    <Animated.View style={{ opacity: entranceOpacity }}>
+      <View style={[s.inner, { paddingHorizontal: width < 420 ? 18 : 24, paddingVertical: width < 760 ? 18 : 28 }, style]}>
+        {children}
+      </View>
+    </Animated.View>
+  );
   if (!scroll) return <View style={s.screen}>{inner}</View>;
   return (
     <ScrollView
       style={s.screen}
-      contentContainerStyle={{ paddingBottom: 40 }}
+      contentContainerStyle={{ paddingBottom: width < 760 ? 116 : 40 }}
       keyboardShouldPersistTaps="handled"
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
     >
@@ -45,8 +87,9 @@ export function Card({ children, onPress, style }: { children: ReactNode; onPres
   if (!onPress) return <View style={[s.card, style]}>{children}</View>;
   return (
     <Pressable
-      onPress={onPress}
-      style={({ pressed, hovered }: any) => [s.card, (pressed || hovered) && s.cardHover, style]}
+      accessibilityRole="button"
+      onPress={() => { blurFocusedElementOnWeb(); onPress(); }}
+      style={({ pressed, hovered }: any) => [s.card, hovered && s.cardHover, pressed && s.cardPressed, style]}
     >
       {children}
     </Pressable>
@@ -55,11 +98,15 @@ export function Card({ children, onPress, style }: { children: ReactNode; onPres
 
 // ---------------------------------------------------------------- Texto
 export const Title = ({ children, style }: { children: ReactNode; style?: any }) => <Text style={[s.title, style]}>{children}</Text>;
-export const H2 = ({ children, style }: { children: ReactNode; style?: any }) => <Text style={[s.h2, style]}>{children}</Text>;
+export const H2 = ({ children, style, numberOfLines }: { children: ReactNode; style?: any; numberOfLines?: number }) => (
+  <Text style={[s.h2, style]} numberOfLines={numberOfLines}>{children}</Text>
+);
 export const Body = ({ children, style, numberOfLines }: { children: ReactNode; style?: any; numberOfLines?: number }) => (
   <Text style={[s.body, style]} numberOfLines={numberOfLines}>{children}</Text>
 );
-export const Muted = ({ children, style }: { children: ReactNode; style?: any }) => <Text style={[s.muted, style]}>{children}</Text>;
+export const Muted = ({ children, style, numberOfLines }: { children: ReactNode; style?: any; numberOfLines?: number }) => (
+  <Text style={[s.muted, style]} numberOfLines={numberOfLines}>{children}</Text>
+);
 
 export function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
@@ -77,7 +124,7 @@ export function Section({ title, action, children }: { title: string; action?: R
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
 
 export function Button({
-  title, onPress, variant = 'primary', loading, disabled, icon, small, style,
+  title, onPress, variant = 'primary', loading, disabled, icon, small, blurOnPress = false, style,
 }: {
   title: string;
   onPress?: () => void;
@@ -86,17 +133,24 @@ export function Button({
   disabled?: boolean;
   icon?: IconName;
   small?: boolean;
+  /** Clears browser focus before actions that navigate, so inactive Expo Router screens don't retain focus. */
+  blurOnPress?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const v = VARIANTS[variant];
+  const handlePress = () => {
+    if (blurOnPress) blurFocusedElementOnWeb();
+    onPress?.();
+  };
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled || loading}
+      accessibilityState={{ disabled: disabled || loading }}
       style={({ pressed }) => [
         s.btn, small && s.btnSmall, { backgroundColor: v.bg, borderColor: v.border },
-        (pressed || disabled) && { opacity: 0.6 }, style,
+        pressed && s.btnPressed, (disabled || loading) && { opacity: 0.58 }, style,
       ]}
     >
       {loading ? (
@@ -155,8 +209,9 @@ export function ChipSelect<T extends string>({
     <View style={{ marginBottom: 12 }}>
       {lbl && <Text style={s.label}>{lbl}</Text>}
       <Row gap={6}>
-        {options.map((o) => (
-          <Pressable key={o} onPress={() => toggle(o)} style={[s.chip, selected(o) && s.chipOn]}>
+      {[...new Set(options)].map((o) => (
+          <Pressable key={o} onPress={() => toggle(o)} accessibilityRole="button"
+            accessibilityState={{ selected: selected(o) }} style={[s.chip, selected(o) && s.chipOn]}>
             <Text style={[s.chipText, selected(o) && { color: '#fff' }]}>{label(o)}</Text>
           </Pressable>
         ))}
@@ -167,7 +222,8 @@ export function ChipSelect<T extends string>({
 
 export function Switch({ label: lbl, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <Pressable onPress={() => onChange(!value)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+    <Pressable onPress={() => onChange(!value)} accessibilityRole="checkbox" accessibilityState={{ checked: value }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, marginBottom: 12 }}>
       <Ionicons name={value ? 'checkbox' : 'square-outline'} size={22} color={colors.primary} />
       <Text style={s.body}>{lbl}</Text>
     </Pressable>
@@ -206,7 +262,7 @@ export function Tags({ items, tone = 'primary' }: { items: string[]; tone?: Tone
   if (!items?.length) return null;
   return (
     <Row gap={6} style={{ marginTop: 6 }}>
-      {items.map((t) => <Badge key={t} text={t} tone={tone} />)}
+      {[...new Set(items)].map((t) => <Badge key={t} text={t} tone={tone} />)}
     </Row>
   );
 }
@@ -215,7 +271,8 @@ export function Stars({ value, onChange, size = 18 }: { value: number; onChange?
   return (
     <Row gap={2}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Pressable key={n} disabled={!onChange} onPress={() => onChange?.(n)}>
+        <Pressable key={n} disabled={!onChange} onPress={() => onChange?.(n)} hitSlop={8}
+          accessibilityRole="button" accessibilityLabel={`${n} de 5 estrellas`} accessibilityState={{ selected: value >= n }}>
           <Ionicons name={value >= n - 0.25 ? 'star' : value >= n - 0.75 ? 'star-half' : 'star-outline'} size={size} color="#E0A100" />
         </Pressable>
       ))}
@@ -274,40 +331,43 @@ export const Divider = () => <View style={{ height: 1, backgroundColor: colors.b
 // ---------------------------------------------------------------- Estilos
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  inner: { width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center', padding: 16 },
+  inner: { width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
   card: {
-    backgroundColor: colors.card, borderRadius: radius.lg, padding: 14, marginBottom: 10,
+    backgroundColor: colors.card, borderRadius: radius.lg, padding: 18, marginBottom: 12,
     borderWidth: 1, borderColor: colors.border,
+    boxShadow: '0px 5px 14px rgba(23, 61, 58, 0.05)',
   },
-  cardHover: { borderColor: colors.primary },
-  title: { fontSize: 24, fontWeight: '800', color: colors.text, marginBottom: 4 },
-  h2: { fontSize: 17, fontWeight: '700', color: colors.text },
+  cardHover: { borderColor: '#B4D8D2' },
+  cardPressed: { backgroundColor: '#FCFEFD' },
+  title: { fontSize: 28, lineHeight: 34, fontWeight: '800', color: colors.text, marginBottom: 4, letterSpacing: -0.4 },
+  h2: { fontSize: 19, lineHeight: 25, fontWeight: '700', color: colors.text, letterSpacing: -0.15 },
   body: { fontSize: 15, color: colors.text, lineHeight: 21 },
-  muted: { fontSize: 13, color: colors.muted, lineHeight: 18 },
-  label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: 6 },
+  muted: { fontSize: 14, color: colors.muted, lineHeight: 20 },
+  label: { fontSize: 13, fontWeight: '700', color: colors.muted, marginBottom: 7 },
   input: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
-    paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: colors.text,
+    paddingHorizontal: 15, paddingVertical: 12, minHeight: 48, fontSize: 15, color: colors.text,
   },
   btn: {
-    borderRadius: radius.md, paddingVertical: 11, paddingHorizontal: 16, alignItems: 'center',
-    justifyContent: 'center', borderWidth: 1, minHeight: 44,
+    borderRadius: 999, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center',
+    justifyContent: 'center', borderWidth: 1, minHeight: 48,
   },
-  btnSmall: { paddingVertical: 6, paddingHorizontal: 10, minHeight: 34 },
+  btnSmall: { paddingVertical: 8, paddingHorizontal: 13, minHeight: 44 },
+  btnPressed: { opacity: 0.84 },
   btnText: { fontSize: 15, fontWeight: '700' },
   chip: {
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: 999,
-    paddingVertical: 6, paddingHorizontal: 12,
+    minHeight: 44, justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 14,
   },
   chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 13, color: colors.text, fontWeight: '600' },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingVertical: 3, paddingHorizontal: 9 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 10 },
   badgeText: { fontSize: 12, fontWeight: '700' },
   barTrack: { flex: 1, height: 8, backgroundColor: colors.primarySoft, borderRadius: 999, overflow: 'hidden' },
   barFill: { height: 8, backgroundColor: colors.primary, borderRadius: 999 },
   stat: {
-    flexGrow: 1, flexBasis: 140, backgroundColor: colors.card, borderRadius: radius.lg, padding: 14,
-    borderWidth: 1, borderColor: colors.border, gap: 2,
+    flexGrow: 1, flexBasis: 140, backgroundColor: colors.card, borderRadius: radius.lg, padding: 17,
+    borderWidth: 1, borderColor: colors.border, gap: 3,
   },
   statValue: { fontSize: 24, fontWeight: '800', color: colors.text },
 });

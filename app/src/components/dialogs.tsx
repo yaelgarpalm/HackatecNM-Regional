@@ -73,7 +73,7 @@ function ToastCard({ toast, onClose }: { toast: Toast; onClose: (id: number) => 
       ],
       width: '100%', maxWidth: 460, backgroundColor: colors.card, borderRadius: 16, marginBottom: 10,
       borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
-      shadowColor: '#0F1E32', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 8,
+      boxShadow: '0px 6px 18px rgba(15, 30, 50, 0.18)',
     }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
         <View style={{
@@ -144,7 +144,7 @@ export function DialogHost() {
           {/* Evita que un toque dentro de la tarjeta la cierre */}
           <Pressable onPress={() => {}} style={{
             width: '100%', maxWidth: 400, backgroundColor: colors.card, borderRadius: 18, padding: 22, alignItems: 'center',
-            shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 10,
+            boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.25)',
           }}>
             <View style={{
               backgroundColor: danger ? colors.dangerSoft : colors.primarySoft, borderRadius: 999, padding: 14, marginBottom: 12,
@@ -164,8 +164,7 @@ export function DialogHost() {
         </Pressable>
       </Modal>
 
-      <View pointerEvents="box-none"
-        style={{ position: 'absolute', top: insets.top + 12, left: 12, right: 12, alignItems: 'center', zIndex: 1000 }}>
+      <View style={{ pointerEvents: 'box-none', position: 'absolute', top: insets.top + 12, left: 12, right: 12, alignItems: 'center', zIndex: 1000 }}>
         {toasts.map((t) => (
           <ToastCard key={t.id} toast={t} onClose={dismiss} />
         ))}

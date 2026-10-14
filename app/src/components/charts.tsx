@@ -327,7 +327,7 @@ export function PieChart({ segments, unit = '', centerLabel = 'Total', size = 19
           </G>
         </Svg>
         {/* Centro: total, o la rebanada seleccionada */}
-        <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, width: size, height: size,
+        <View style={{ pointerEvents: 'none', position: 'absolute', top: 0, left: 0, width: size, height: size,
           alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 28, fontWeight: '800', color: ink.primary }}>
             {sel ? sel.value : Math.round(total * grow)}

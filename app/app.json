@@ -8,7 +8,11 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "mx.vinculatec.app"
+      "bundleIdentifier": "mx.vinculatec.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "VinculaTec usa la cámara durante las videollamadas de tus proyectos.",
+        "NSMicrophoneUsageDescription": "VinculaTec usa el micrófono durante las videollamadas de tus proyectos."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +22,12 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "mx.vinculatec.app"
+      "package": "mx.vinculatec.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",

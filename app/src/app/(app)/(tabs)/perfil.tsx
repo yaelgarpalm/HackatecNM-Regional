@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { useApi } from '@/components/hooks';
 import { colors } from '@/components/theme';
 import {
   Badge, Body, Button, Card, confirm, Empty, ErrorView, H2, Loading, Muted, Row, Screen, Section, Stars, StatusBadge, Tags, Title,
+  blurFocusedElementOnWeb,
   type IconName,
 } from '@/components/ui';
 import { useAuth, useUser } from '@/lib/auth';
@@ -15,8 +16,10 @@ import type { Organization, Proposal } from '@/lib/types';
 
 function LinkRow({ icon, text, href }: { icon: IconName; text: string; href: Href }) {
   return (
-    <Pressable onPress={() => router.push(href)}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.border }}>
+    <Pressable onPress={() => { blurFocusedElementOnWeb(); router.push(href); }}
+      accessibilityRole="button"
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, minHeight: 52,
+        borderBottomWidth: 1, borderColor: colors.border, opacity: pressed ? 0.72 : 1 })}>
       <Ionicons name={icon} size={20} color={colors.primary} />
       <Text style={{ flex: 1, fontSize: 15, color: colors.text }}>{text}</Text>
       <Ionicons name="chevron-forward" size={18} color={colors.muted} />
@@ -58,12 +61,21 @@ export default function Perfil() {
   return (
     <Screen>
       <Card>
-        <Title>{user.full_name}</Title>
-        <Row gap={6}>
-          <Badge text={label(user.role)} tone="primary" />
-          {org.data && <Badge text={org.data.name} icon={org.data.verified ? 'shield-checkmark' : 'business-outline'} tone={org.data.verified ? 'success' : 'neutral'} />}
+        <Row gap={14} style={{ flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+          <View style={{ width: 64, height: 64, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: colors.primary, fontSize: 22, fontWeight: '800' }}>
+              {user.full_name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Title style={{ fontSize: 23, lineHeight: 29 }}>{user.full_name}</Title>
+            <Muted>{user.email}</Muted>
+            <Row gap={6} style={{ marginTop: 8 }}>
+              <Badge text={label(user.role)} tone="primary" />
+              {org.data && <Badge text={org.data.name} icon={org.data.verified ? 'shield-checkmark' : 'business-outline'} tone={org.data.verified ? 'success' : 'neutral'} />}
+            </Row>
+          </View>
         </Row>
-        <Muted style={{ marginTop: 6 }}>{user.email}</Muted>
         {!!user.career && <Body style={{ marginTop: 8 }}>{user.career}{user.semester ? ` · ${user.semester}° semestre` : ''}</Body>}
         {!!user.bio && <Body style={{ marginTop: 6 }}>{user.bio}</Body>}
         <Tags items={user.skills} />

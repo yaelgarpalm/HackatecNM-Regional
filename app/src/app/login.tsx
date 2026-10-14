@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/components/theme';
 import { Button, Card, ErrorView, Field } from '@/components/ui';
@@ -28,14 +29,17 @@ export default function Login() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.bg}>
-      <View style={s.wrap}>
+      <StatusBar style="dark" />
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+       <View style={s.wrap}>
         <View style={s.brand}>
-          <Ionicons name="git-network-outline" size={44} color="#fff" />
+          <View style={s.brandMark}>
+            <Ionicons name="git-network-outline" size={28} color={colors.primary} />
+          </View>
           <Text style={s.logo}>VinculaTec</Text>
-          <Text style={s.tagline}>Problemáticas reales de empresas, resueltas por equipos universitarios</Text>
         </View>
 
-        <Card style={{ padding: 20 }}>
+        <Card style={s.form}>
           <Field label="Correo" value={email} onChangeText={setEmail} autoCapitalize="none"
             keyboardType="email-address" autoComplete="email" placeholder="tu@correo.mx" />
           <Field label="Contraseña" value={password} onChangeText={setPassword} secureTextEntry
@@ -48,15 +52,18 @@ export default function Login() {
             </Pressable>
           </Link>
         </Card>
-      </View>
+       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: colors.primary, justifyContent: 'center' },
-  wrap: { width: '100%', maxWidth: 440, alignSelf: 'center', padding: 20 },
-  brand: { alignItems: 'center', marginBottom: 20, gap: 4 },
-  logo: { color: '#fff', fontSize: 32, fontWeight: '900' },
-  tagline: { color: '#D6E4F0', textAlign: 'center', fontSize: 14 },
+  bg: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingVertical: 32 },
+  wrap: { width: '100%', maxWidth: 440, alignSelf: 'center', paddingHorizontal: 22 },
+  brand: { alignItems: 'center', marginBottom: 24, gap: 10 },
+  brandMark: { width: 62, height: 62, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  logo: { color: colors.text, fontSize: 30, fontWeight: '900', letterSpacing: -0.8 },
+  form: { padding: 22, borderRadius: 26, boxShadow: '0px 12px 24px rgba(23, 61, 58, 0.08)' },
 });

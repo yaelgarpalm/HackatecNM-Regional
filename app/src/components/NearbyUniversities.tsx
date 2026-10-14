@@ -10,13 +10,13 @@ import { Badge, Button, Card, Empty, ErrorView, H2, Loading, Muted, Row, Section
 import type { MapMarker } from '@/lib/mapHtml';
 import type { NearbyOrganization, Organization } from '@/lib/types';
 
-const RADIOS = [25, 50, 100, 250] as const;
+const RADIOS = [10, 30, 50, 100, 250] as const;
 
-/** Mapa (OpenStreetMap) y lista de universidades cercanas a la organización del usuario. */
+/** Mapa y lista adaptable de universidades cercanas a la organización del usuario. */
 export function NearbyUniversities({ orgId }: { orgId: number }) {
   const org = useApi<Organization>(`/organizations/${orgId}`);
   const located = org.data?.latitude != null && org.data?.longitude != null;
-  const [radiusKm, setRadiusKm] = useState<number>(100);
+  const [radiusKm, setRadiusKm] = useState<number>(30);
   const [selected, setSelected] = useState<number | null>(null);
   const q = useApi<NearbyOrganization[]>(located ? '/organizations/nearby' : null, { radius_km: radiusKm });
 
@@ -54,15 +54,16 @@ export function NearbyUniversities({ orgId }: { orgId: number }) {
         </Card>
       ) : (
         <>
-          <Row gap={6} style={{ marginBottom: 10 }}>
+          <Row gap={6} style={{ marginBottom: 8 }}>
             <Muted style={{ fontWeight: '700' }}>Distancia:</Muted>
             {RADIOS.map((r) => {
               const on = radiusKm === r;
               return (
-                <Pressable key={r} onPress={() => { setRadiusKm(r); setSelected(null); }}
-                  style={{ borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12, borderWidth: 1,
+                <Pressable key={r} onPress={() => { setRadiusKm(r); setSelected(null); }} accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  style={{ borderRadius: 999, minHeight: 44, justifyContent: 'center', paddingVertical: 7, paddingHorizontal: 14, borderWidth: 1,
                     borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary : colors.card }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: on ? '#fff' : colors.text }}>{r} km</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: on ? '#fff' : colors.text }}>{r} km</Text>
                 </Pressable>
               );
             })}
@@ -70,6 +71,7 @@ export function NearbyUniversities({ orgId }: { orgId: number }) {
 
           <OsmMap markers={markers} center={center} radiusKm={radiusKm} height={340}
             onSelect={(id) => id !== 'home' && setSelected(Number(id))} />
+          <Muted style={{ marginTop: 6 }}>Distancias aproximadas según las ubicaciones registradas.</Muted>
           <Row gap={14} style={{ marginTop: 8, marginBottom: 12 }}>
             <Row gap={6}><Text style={{ color: colors.primary, fontSize: 15 }}>★</Text><Muted>Tu organización</Muted></Row>
             <Row gap={6}><View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#eb6834' }} /><Muted>Universidad</Muted></Row>
@@ -79,39 +81,40 @@ export function NearbyUniversities({ orgId }: { orgId: number }) {
             !q.data?.length ? (
               <Empty icon="school-outline"
                 text={`No hay universidades ubicadas a menos de ${radiusKm} km. Prueba con una distancia mayor.`} />
-            ) : q.data.map((u, i) => (
-              <Pressable key={u.id} onPress={() => setSelected(u.id)}
-                style={({ hovered }: any) => ({
-                  backgroundColor: colors.card, borderRadius: radius.lg, padding: 14, marginBottom: 8, borderWidth: 1,
-                  borderColor: selected === u.id ? colors.primary : hovered ? colors.primary : colors.border,
-                })}>
-                <Row style={{ justifyContent: 'space-between', flexWrap: 'nowrap', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
-                    <Row gap={6}>
-                      {i === 0 && <Badge text="La más cercana" tone="success" icon="navigate" />}
-                      {u.verified && <Badge text="Verificada" tone="primary" icon="shield-checkmark" />}
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                {q.data.map((u, i) => (
+                  <View key={u.id} style={{ flexGrow: 1, flexBasis: 280, maxWidth: 360, backgroundColor: colors.card,
+                    borderRadius: radius.lg, padding: 17, borderWidth: 1,
+                    borderColor: selected === u.id ? colors.primary : colors.border,
+                    boxShadow: '0px 4px 12px rgba(23, 61, 58, 0.05)' }}>
+                    <Row style={{ justifyContent: 'space-between', flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1 }}>
+                        <Row gap={6}>
+                          {i === 0 && <Badge text="La más cercana" tone="success" icon="navigate" />}
+                          {u.verified && <Badge text="Verificada" tone="primary" icon="shield-checkmark" />}
+                        </Row>
+                        <H2 style={{ marginTop: 8 }} numberOfLines={2}>{u.name}</H2>
+                        <Muted numberOfLines={1}>{[u.city, u.state].filter(Boolean).join(', ')}</Muted>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', marginLeft: 8 }}>
+                        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text }}>{u.distance_km}</Text>
+                        <Muted>km</Muted>
+                      </View>
                     </Row>
-                    <H2 style={{ marginTop: 4 }}>{u.name}</H2>
-                    <Muted>{[u.city, u.state].filter(Boolean).join(', ')}</Muted>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>{u.distance_km}</Text>
-                    <Muted>km</Muted>
-                  </View>
-                </Row>
-                <Row gap={6} style={{ marginTop: 8 }}>
-                  <Badge icon="flask-outline" text={`${u.capabilities} capacidad(es)`} tone={u.capabilities ? 'primary' : 'neutral'} />
-                  {u.careers.slice(0, 3).map((c) => <Badge key={c} icon="school-outline" text={c} tone="neutral" />)}
-                  {u.careers.length > 3 && <Badge text={`+${u.careers.length - 3} carreras`} tone="neutral" />}
-                </Row>
-                {selected === u.id && (
-                  <Row style={{ marginTop: 10 }}>
+                    <Row gap={6} style={{ marginTop: 10 }}>
+                      <Badge icon="flask-outline" text={`${u.capabilities} capacidad(es)`} tone={u.capabilities ? 'primary' : 'neutral'} />
+                      {u.careers.slice(0, 3).map((c) => <Badge key={c} icon="school-outline" text={c} tone="neutral" />)}
+                      {u.careers.length > 3 && <Badge text={`+${u.careers.length - 3} carreras`} tone="neutral" />}
+                    </Row>
+                    {selected === u.id && <Muted style={{ marginTop: 8, color: colors.primary }}>Marcada en el mapa</Muted>}
                     <Button small title="Ver sus capacidades" icon="flask-outline"
-                      onPress={() => router.push({ pathname: '/capacidades', params: { org: u.id } })} />
-                  </Row>
-                )}
-              </Pressable>
-            ))}
+                      onPress={() => router.push({ pathname: '/capacidades', params: { org: u.id } })}
+                      style={{ alignSelf: 'flex-start', marginTop: 12 }} />
+                  </View>
+                ))}
+              </View>
+            )}
         </>
       )}
     </Section>

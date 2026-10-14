@@ -4,6 +4,7 @@ import { ChallengeCard } from '@/components/ChallengeCard';
 import { NearbyUniversities } from '@/components/NearbyUniversities';
 import { UniversityDashboard } from '@/components/UniversityDashboard';
 import { useApi } from '@/components/hooks';
+import { colors } from '@/components/theme';
 import {
   Badge, Body, Button, Card, Empty, ErrorView, H2, Loading, Muted, Row, ScoreBar, Screen, Section, Stat, StatusBadge, Title,
 } from '@/components/ui';
@@ -23,10 +24,11 @@ export default function Inicio() {
 }
 
 const Hello = ({ user, text }: { user: User; text: string }) => (
-  <>
-    <Title>Hola, {user.full_name.split(' ')[0]}</Title>
+  <Card style={{ backgroundColor: colors.primarySoft, borderColor: 'transparent', padding: 22 }}>
+    <Badge text="VinculaTec" tone="primary" icon="git-network-outline" />
+    <Title style={{ marginTop: 10 }}>Hola, {user.full_name.split(' ')[0]}</Title>
     <Muted>{text}</Muted>
-  </>
+  </Card>
 );
 
 // ---------------------------------------------------------------- Estudiante / académico
@@ -45,7 +47,7 @@ function AcademicHome({ user }: { user: User }) {
         title="Explorar oportunidades y retos"
         icon="bulb-outline"
         onPress={() => router.push('/retos')}
-        style={{ marginTop: 14, alignSelf: 'flex-start' }}
+        style={{ marginTop: 2, alignSelf: 'stretch' }}
       />
 
       {!user.skills.length && (
@@ -59,15 +61,17 @@ function AcademicHome({ user }: { user: User }) {
       {acceptedProposals.length > 0 && (
         <Section title="Mis proyectos activos" action={<Button small variant="ghost" title="Ver portafolio" onPress={() => router.push(`/usuario/${user.id}`)} />}>
           {acceptedProposals.map((p) => (
-            <Card key={p.id} onPress={() => router.push(`/reto/${p.challenge_id}`)}>
+            <Card key={p.id}>
               <Row style={{ justifyContent: 'space-between' }}>
                 <H2 style={{ flex: 1 }}>{p.challenge_title ?? `Proyecto #${p.challenge_id}`}</H2>
                 <Badge text="Proyecto Activo" tone="success" icon="rocket-outline" />
               </Row>
               <Muted>Equipo {p.team?.name}</Muted>
               <Row gap={8} style={{ marginTop: 8 }}>
+                <Button small variant="secondary" title="Abrir proyecto" icon="open-outline" onPress={() => router.push(`/reto/${p.challenge_id}`)} />
                 <Button small title="Entregar hitos" icon="flag-outline" onPress={() => router.push(`/reto/${p.challenge_id}/hitos`)} />
                 <Button small variant="secondary" title="Chat del equipo" icon="chatbubbles-outline" onPress={() => router.push(`/reto/${p.challenge_id}/chat`)} />
+                <Button small variant="secondary" title="Videollamada" icon="videocam-outline" onPress={() => router.push(`/reto/${p.challenge_id}/videollamada`)} />
               </Row>
             </Card>
           ))}
@@ -117,7 +121,7 @@ function PublisherHome({ user }: { user: User }) {
     <Screen onRefresh={q.refetch} refreshing={q.isRefetching}>
       <Hello user={user} text="¿Qué problema u oportunidad tecnológica necesitas resolver en tu organización?" />
       <Button title="Crear un reto" icon="add-circle-outline" onPress={() => router.push('/publicar')}
-        style={{ marginTop: 14, alignSelf: 'flex-start' }} />
+        style={{ marginTop: 2, alignSelf: 'stretch' }} />
 
       <Row style={{ marginTop: 16 }} gap={10}>
         <Stat value={count('abierto')} text="Retos abiertos" icon="megaphone-outline" />
@@ -129,15 +133,17 @@ function PublisherHome({ user }: { user: User }) {
       {inProgress.length > 0 && (
         <Section title="Proyectos en progreso activo">
           {inProgress.map((c) => (
-            <Card key={c.id} onPress={() => router.push(`/reto/${c.id}`)}>
+            <Card key={c.id}>
               <Row style={{ justifyContent: 'space-between' }}>
                 <H2 style={{ flex: 1 }}>{c.title}</H2>
                 <Badge text="En progreso" tone="success" icon="rocket-outline" />
               </Row>
               <Muted>{c.category}</Muted>
               <Row gap={8} style={{ marginTop: 8 }}>
+                <Button small variant="secondary" title="Abrir proyecto" icon="open-outline" onPress={() => router.push(`/reto/${c.id}`)} />
                 <Button small title="Revisar entregables" icon="flag-outline" onPress={() => router.push(`/reto/${c.id}/hitos`)} />
                 <Button small variant="secondary" title="Chat con el equipo" icon="chatbubbles-outline" onPress={() => router.push(`/reto/${c.id}/chat`)} />
+                <Button small variant="secondary" title="Videollamada" icon="videocam-outline" onPress={() => router.push(`/reto/${c.id}/videollamada`)} />
               </Row>
             </Card>
           ))}

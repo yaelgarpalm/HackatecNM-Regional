@@ -15,13 +15,14 @@ export type OsmMapProps = {
   onPick?: (lat: number, lng: number) => void;
 };
 
-/** Mapa de OpenStreetMap (Android/iOS). En la web se usa OsmMap.web.tsx. */
+/** Mapa vectorial de OpenFreeMap (Android/iOS). En web se usa OsmMap.web.tsx. */
 export function OsmMap({ markers, center, radiusKm, pickable, height = 320, onSelect, onPick }: OsmMapProps) {
   const html = useMemo(() => mapHtml({ markers, center, radiusKm, pickable }), [markers, center, radiusKm, pickable]);
   return (
     <View style={{ height, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
       <WebView
         originWhitelist={['*']}
+        applicationNameForUserAgent="VinculaTec/1.0"
         source={{ html }}
         javaScriptEnabled
         onMessage={(e) => {
