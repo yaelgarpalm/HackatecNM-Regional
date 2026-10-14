@@ -45,7 +45,8 @@ function OrgForm({ org }: { org: Organization }) {
         <Field label="Ciudad" value={f.city} onChangeText={set('city')} />
         <Field label="Estado" value={f.state} onChangeText={set('state')} />
         <Field label="Sitio web" value={f.website} onChangeText={set('website')} autoCapitalize="none" />
-        <Button title="Guardar" icon="save-outline" loading={save.isPending} onPress={() => save.mutate(undefined)} />
+        <Button title="Guardar" icon="save-outline" loading={save.isPending} blurOnPress
+          onPress={() => save.mutate(undefined)} />
       </Card>
 
       <Location org={org} />

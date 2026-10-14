@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, router } from 'expo-router';
-import { Pressable, Text, View, type ColorValue } from 'react-native';
+import { Pressable, Text, View, useWindowDimensions, type ColorValue } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApi } from '@/components/hooks';
 import { colors } from '@/components/theme';
-import type { IconName } from '@/components/ui';
+import { blurFocusedElementOnWeb, type IconName } from '@/components/ui';
 import { isAcademic, useUser } from '@/lib/auth';
 import type { Notification, Page } from '@/lib/types';
 
@@ -21,7 +22,8 @@ function BellButton() {
   });
   const unread = data?.total ?? 0;
   return (
-    <Pressable onPress={() => router.push('/notificaciones')} style={{ marginRight: 16 }} accessibilityLabel="Notificaciones">
+    <Pressable onPress={() => { blurFocusedElementOnWeb(); router.push('/notificaciones'); }} style={{ marginRight: 16, padding: 4 }}
+      accessibilityRole="button" accessibilityLabel="Notificaciones">
       <Ionicons name="notifications-outline" size={24} color="#fff" />
       {unread > 0 && (
         <View
@@ -39,18 +41,33 @@ function BellButton() {
 
 export default function TabsLayout() {
   const user = useUser();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const academic = isAcademic(user);
   const isPublisher = user.role === 'empresa' || user.role === 'gobierno';
+  const mobile = width < 760;
 
   return (
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.primary },
         headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '700' },
+        headerTitleStyle: { fontWeight: '800', fontSize: 17 },
         headerRight: () => <BellButton />,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
+        tabBarHideOnKeyboard: true,
+        tabBarLabelStyle: { fontSize: width < 380 ? 10 : 11, fontWeight: '700' },
+        tabBarItemStyle: { paddingVertical: 4, minWidth: 0 },
+        tabBarStyle: mobile ? {
+          position: 'absolute', left: 14, right: 14, bottom: Math.max(insets.bottom, 8) + 8,
+          height: 70, paddingTop: 7, paddingBottom: 7,
+          backgroundColor: colors.card, borderTopWidth: 0, borderWidth: 1, borderColor: colors.border,
+          borderRadius: 24, boxShadow: '0px 8px 22px rgba(23, 61, 58, 0.12)',
+        } : {
+          height: 62, paddingTop: 5, paddingBottom: 5,
+          backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border,
+        },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
@@ -58,8 +75,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="retos"
         options={{
-          title: isPublisher ? 'Mis Retos' : 'Oportunidades',
+          title: isPublisher ? 'Mis Retos' : 'Retos',
           tabBarIcon: icon('bulb-outline'),
+          tabBarAccessibilityLabel: isPublisher ? 'Mis retos' : 'Oportunidades y retos',
         }}
       />
       <Tabs.Screen

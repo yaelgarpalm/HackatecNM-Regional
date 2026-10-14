@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { useApi } from '@/components/hooks';
-import { Badge, Body, Card, ChipSelect, Empty, ErrorView, H2, Loading, Muted, Row, ScoreBar, Screen, Section, Stars, Tags } from '@/components/ui';
+import { Badge, Body, Button, Card, ChipSelect, Empty, ErrorView, H2, Loading, Muted, Row, ScoreBar, Screen, Section, Stars, Tags } from '@/components/ui';
 import { label } from '@/lib/format';
 import type { CapabilityMatch, Challenge, UserMatch } from '@/lib/types';
 
@@ -41,7 +41,7 @@ export default function Sugerencias() {
         {talent.isLoading ? <Loading /> : talent.error ? <ErrorView error={talent.error} /> :
           !talent.data?.length ? <Empty text="Sin coincidencias por ahora." icon="people-outline" /> :
           talent.data.map((m) => (
-            <Card key={m.user.id} onPress={() => router.push(`/usuario/${m.user.id}`)}>
+            <Card key={m.user.id}>
               <Row style={{ justifyContent: 'space-between' }}>
                 <H2>{m.user.full_name}</H2>
                 {m.user.rating_count > 0 && <Stars value={m.user.rating_avg} size={14} />}
@@ -50,6 +50,8 @@ export default function Sugerencias() {
               <Tags items={m.user.skills} tone="neutral" />
               <ScoreBar score={m.score} />
               {m.reasons.map((r) => <Muted key={r}>• {r}</Muted>)}
+              <Button small variant="secondary" title="Ver perfil" icon="person-circle-outline"
+                style={{ alignSelf: 'flex-start', marginTop: 10 }} onPress={() => router.push(`/usuario/${m.user.id}`)} />
             </Card>
           ))}
       </Section>

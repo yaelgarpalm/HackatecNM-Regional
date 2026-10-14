@@ -1,22 +1,22 @@
 export const colors = {
-  primary: '#0F4C81',
-  primaryDark: '#0A3559',
-  primarySoft: '#E7EFF7',
-  accent: '#E07A1F',
-  accentSoft: '#FDF0E4',
-  success: '#1E7F4F',
-  successSoft: '#E4F4EB',
+  primary: '#0D716B',
+  primaryDark: '#104E4D',
+  primarySoft: '#E4F3F0',
+  accent: '#B94E42',
+  accentSoft: '#FFF0EC',
+  success: '#187451',
+  successSoft: '#E5F4EC',
   danger: '#B42318',
   dangerSoft: '#FDECEA',
-  warning: '#9A6700',
+  warning: '#865B08',
   warningSoft: '#FFF6DB',
-  text: '#16202B',
-  muted: '#5B6773',
-  border: '#DCE2E8',
-  bg: '#F4F6F9',
+  text: '#18353A',
+  muted: '#5A7074',
+  border: '#DCE8E5',
+  bg: '#F3F8F7',
   card: '#FFFFFF',
 };
 
-export const radius = { sm: 6, md: 10, lg: 14 };
+export const radius = { sm: 10, md: 14, lg: 22 };
 export const space = (n: number) => n * 4;
-export const MAX_WIDTH = 980;
+export const MAX_WIDTH = 1080;

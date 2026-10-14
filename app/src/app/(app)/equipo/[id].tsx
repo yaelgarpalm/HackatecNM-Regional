@@ -49,13 +49,15 @@ export default function EquipoDetalle() {
 
       <Section title="Integrantes">
         {t.members.map((m) => (
-          <Card key={m.user_id} onPress={() => router.push(`/usuario/${m.user_id}`)}>
+          <Card key={m.user_id}>
             <Row style={{ justifyContent: 'space-between' }}>
               <H2>{m.user.full_name}</H2>
               <Badge text={label(m.role)} tone={m.role === 'integrante' ? 'neutral' : 'primary'} />
             </Row>
             <Muted>{m.user.career ?? label(m.user.role)}</Muted>
             <Tags items={m.user.skills} tone="neutral" />
+            <Button small variant="secondary" title="Ver perfil" icon="person-circle-outline"
+              style={{ alignSelf: 'flex-start', marginTop: 6 }} onPress={() => router.push(`/usuario/${m.user_id}`)} />
             {(manager || m.user_id === user.id) && (
               <Button small variant="ghost" title={m.user_id === user.id ? 'Salir del equipo' : 'Quitar'} icon="person-remove-outline"
                 style={{ alignSelf: 'flex-start', marginTop: 6 }}

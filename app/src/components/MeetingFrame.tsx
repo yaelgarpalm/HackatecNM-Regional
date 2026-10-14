@@ -11,7 +11,7 @@ export function MeetingFrame({ url, onLoad, onError }: { url: string; onLoad: ()
       domStorageEnabled
       allowsInlineMediaPlayback
       mediaPlaybackRequiresUserAction={false}
-      mediaCapturePermissionGrantType="grant"
+      mediaCapturePermissionGrantType="grantIfSameHostElsePrompt"
       allowsFullscreenVideo
       originWhitelist={['https://*']}
       onLoadEnd={onLoad}

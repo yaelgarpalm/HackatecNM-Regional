@@ -3,11 +3,12 @@ import { Stack } from 'expo-router';
 import { Pressable, Text } from 'react-native';
 
 import { colors } from '@/components/theme';
+import { blurFocusedElementOnWeb } from '@/components/ui';
 import { goHome } from '@/lib/format';
 
 function HomeButton() {
   return (
-    <Pressable onPress={goHome} accessibilityLabel="Ir al inicio" hitSlop={6}
+    <Pressable onPress={() => { blurFocusedElementOnWeb(); goHome(); }} accessibilityLabel="Ir al inicio" hitSlop={6}
       style={({ pressed }) => ({
         flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 12, paddingVertical: 6, paddingHorizontal: 12,
         borderRadius: 999, backgroundColor: pressed ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.16)',

@@ -6,7 +6,7 @@ import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, View } fro
 import { useAction, useApi } from '@/components/hooks';
 import { MeetingFrame } from '@/components/MeetingFrame';
 import { colors } from '@/components/theme';
-import { Body, Button, Card, ErrorView, Loading, Muted, Screen, Section, Title } from '@/components/ui';
+import { Badge, Body, Button, Card, ErrorView, Loading, Muted, Screen, Section, Title } from '@/components/ui';
 import { useUser } from '@/lib/auth';
 import { api } from '@/lib/api';
 
@@ -16,6 +16,7 @@ export default function Videollamada() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useUser();
   const isCompany = user.role === 'empresa';
+  const insecureWeb = Platform.OS === 'web' && typeof window !== 'undefined' && !window.isSecureContext;
   const q = useApi<Room>(`/challenges/${id}/videocall`, undefined, { refetchInterval: 5_000 });
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,10 +38,11 @@ export default function Videollamada() {
 
   const leave = async () => {
     try {
-      if (isCompany) await endCall.mutateAsync(undefined).catch(() => undefined);
-    } finally {
+      if (isCompany) await endCall.mutateAsync(undefined);
       setStarted(false);
       router.replace(`/reto/${id}`);
+    } catch {
+      // useAction ya muestra el error; mantenemos la sala abierta para que la empresa pueda reintentar.
     }
   };
 
@@ -49,7 +51,7 @@ export default function Videollamada() {
       <View style={styles.meeting}>
         <Stack.Screen options={{ title: 'Videollamada', headerShown: true }} />
         {loading && (
-          <View style={styles.loading} pointerEvents="none">
+          <View style={styles.loading}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Muted style={styles.loadingText}>Conectando con la sala…</Muted>
           </View>
@@ -86,11 +88,19 @@ export default function Videollamada() {
       </View>
       <Section title="Sala de reunión">
         <Card>
-          <Body style={styles.label}>Sala asignada</Body>
+          <View style={styles.roomHeader}>
+            <Body style={styles.label}>Sala asignada</Body>
+            <Badge text={active ? 'Abierta' : 'En espera'} tone={active ? 'success' : 'neutral'} icon={active ? 'radio-button-on' : 'time-outline'} />
+          </View>
           <Body style={styles.room}>{room}</Body>
           {!isCompany && !active ? (
             <Muted style={{ marginTop: 10 }}>La sala aún no está abierta. Te avisaremos cuando la empresa inicie la videollamada.</Muted>
           ) : null}
+          {insecureWeb && active && (
+            <Muted style={{ marginTop: 10, color: colors.danger }}>
+              El navegador bloquea la cámara y el micrófono en esta dirección HTTP. Abre la sala en una pestaña nueva o usa VinculaTec con HTTPS.
+            </Muted>
+          )}
           {isCompany ? (
             <Button title={active ? 'Entrar a la videollamada' : 'Iniciar videollamada'} icon="videocam-outline"
               loading={!active && startCall.isPending} disabled={!active && startCall.isPending}
@@ -102,7 +112,7 @@ export default function Videollamada() {
               onPress={() => { setError(false); setLoading(true); setStarted(true); }} style={{ marginTop: 14 }} />
           ) : null}
           {Platform.OS === 'web' && active && (
-            <Button title="Abrir en una pestaña nueva" variant="secondary" icon="open-outline"
+            <Button title={insecureWeb ? 'Abrir sala en una pestaña nueva' : 'Abrir en una pestaña nueva'} variant="secondary" icon="open-outline"
               onPress={() => Linking.openURL(meetingUrl)} style={{ marginTop: 8 }} />
           )}
         </Card>
@@ -120,7 +130,7 @@ export default function Videollamada() {
 
 const styles = StyleSheet.create({
   meeting: { flex: 1, backgroundColor: '#000' },
-  loading: { position: 'absolute', zIndex: 2, top: 0, left: 0, right: 0, paddingVertical: 14, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.92)' },
+  loading: { pointerEvents: 'none', position: 'absolute', zIndex: 2, top: 0, left: 0, right: 0, paddingVertical: 14, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.92)' },
   loadingText: { marginTop: 6 },
   leave: { position: 'absolute', zIndex: 4, top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 20, backgroundColor: 'rgba(30,30,30,0.85)' },
   leaveText: { color: '#fff', fontWeight: '700' },
@@ -129,6 +139,7 @@ const styles = StyleSheet.create({
   iconCircle: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   title: { textAlign: 'center' },
   center: { textAlign: 'center', marginTop: 6 },
+  roomHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 6 },
   label: { fontWeight: '700', marginBottom: 6 },
   room: { fontSize: 15, fontWeight: '600', color: colors.primary, backgroundColor: colors.bg, padding: 10, borderRadius: 8 },
   tip: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },

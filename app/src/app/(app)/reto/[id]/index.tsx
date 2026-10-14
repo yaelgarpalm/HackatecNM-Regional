@@ -133,15 +133,6 @@ export default function RetoDetalle() {
             </Card>
           )}
 
-          {participant && (
-            <Row style={{ marginTop: 12 }}>
-              <Button title="Hitos y entregas" icon="flag-outline" onPress={() => router.push(`/reto/${id}/hitos`)} />
-              <Button title="Mensajes del proyecto" variant="secondary" icon="chatbubbles-outline" onPress={() => router.push(`/reto/${id}/chat`)} />
-              {ch.status === 'finalizado' && (
-                <Button title="Evaluar participantes" variant="success" icon="star-outline" onPress={() => router.push(`/reto/${id}/evaluar`)} />
-              )}
-            </Row>
-          )}
         </Card>
       )}
 
@@ -202,7 +193,10 @@ export default function RetoDetalle() {
 
       {/* ---------- Colaboración (dueño + equipo aceptado) ---------- */}
       {participant && active && (
-        <Section title="Colaboración">
+        <Section title="Comunicación y seguimiento del proyecto">
+          <Muted style={{ marginBottom: 8 }}>
+            El chat y la videollamada pertenecen a este proyecto; así el equipo y la organización mantienen aquí sus acuerdos y avances.
+          </Muted>
           {accepted && <Muted style={{ marginBottom: 8 }}>Equipo asignado: {accepted.team?.name}</Muted>}
           <Row>
             <Button title="Hitos y entregas" icon="flag-outline" onPress={() => router.push(`/reto/${id}/hitos`)} />

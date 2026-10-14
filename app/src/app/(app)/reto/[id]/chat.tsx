@@ -8,11 +8,12 @@ import { Button, Empty, ErrorView, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useUser } from '@/lib/auth';
 import { label, timeAgo } from '@/lib/format';
-import type { ChatMessage } from '@/lib/types';
+import type { Challenge, ChatMessage } from '@/lib/types';
 
 export default function Chat() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useUser();
+  const project = useApi<Challenge>(`/challenges/${id}`);
   // Polling cada 5 s (el backend soporta after_id para versiones incrementales)
   const q = useApi<ChatMessage[]>(`/challenges/${id}/messages`, undefined, { refetchInterval: 5000 });
   const [text, setText] = useState('');
@@ -32,8 +33,12 @@ export default function Chat() {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={90}>
-      <Stack.Screen options={{ title: 'Mensajes' }} />
+      <Stack.Screen options={{ title: 'Chat del proyecto' }} />
       <View style={s.wrap}>
+        <View style={s.projectContext}>
+          <Text style={s.projectTitle}>{project.data?.title ?? `Proyecto #${id}`}</Text>
+          <Text style={s.projectHint}>Conversación privada de este proyecto</Text>
+        </View>
         {q.error ? <ErrorView error={q.error} /> : (
           <FlatList
             ref={list}
@@ -45,7 +50,9 @@ export default function Chat() {
               const mine = m.author_id === user.id;
               return (
                 <View style={[s.bubble, mine ? s.mine : s.theirs]}>
-                  {!mine && <Text style={s.author}>{m.author.full_name} · {label(m.author.role)}</Text>}
+                  <Text style={[s.author, mine && s.mineAuthor]}>
+                    {mine ? `${m.author.full_name} (tú)` : m.author.full_name} · {label(m.author.role)}
+                  </Text>
                   <Text style={{ color: mine ? '#fff' : colors.text, fontSize: 15 }}>{m.body}</Text>
                   <Text style={[s.time, mine && { color: '#CFE0F0' }]}>{timeAgo(m.created_at)}</Text>
                 </View>
@@ -65,10 +72,14 @@ export default function Chat() {
 
 const s = StyleSheet.create({
   wrap: { flex: 1, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  projectContext: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+  projectTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  projectHint: { fontSize: 12, color: colors.muted, marginTop: 2 },
   bubble: { maxWidth: '80%', borderRadius: 14, padding: 10 },
   mine: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4 },
   theirs: { alignSelf: 'flex-start', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 },
   author: { fontSize: 12, fontWeight: '700', color: colors.primary, marginBottom: 2 },
+  mineAuthor: { color: '#DCEFEB' },
   time: { fontSize: 11, color: colors.muted, marginTop: 4, alignSelf: 'flex-end' },
   composer: { flexDirection: 'row', gap: 8, padding: 12, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: 'flex-end' },
   input: {

@@ -6,7 +6,7 @@ import { mapHtml, type MapMessage } from '@/lib/mapHtml';
 
 import type { OsmMapProps } from './OsmMap';
 
-/** Mapa de OpenStreetMap en el navegador: la página del mapa va en un iframe y avisa con postMessage. */
+/** Mapa vectorial de OpenFreeMap en el navegador; el iframe avisa a la app con postMessage. */
 export function OsmMap({ markers, center, radiusKm, pickable, height = 320, onSelect, onPick }: OsmMapProps) {
   const html = useMemo(() => mapHtml({ markers, center, radiusKm, pickable }), [markers, center, radiusKm, pickable]);
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -36,6 +36,8 @@ export function OsmMap({ markers, center, radiusKm, pickable, height = 320, onSe
         ref: frame,
         srcDoc: html,
         title: 'Mapa',
+        // Mantiene un referente reducido al origen y evita exponer rutas de la app al mapa externo.
+        referrerPolicy: 'origin',
         // allow-same-origin no se da: el mapa no necesita acceso a la app, solo avisar con postMessage
         sandbox: 'allow-scripts allow-popups',
         style: { width: '100%', height: '100%', border: 0 },
