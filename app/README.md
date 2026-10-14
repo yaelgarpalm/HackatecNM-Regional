@@ -1,6 +1,6 @@
 # VinculaTec App — Frontend (Expo · React Native · TypeScript)
 
-Un solo código para **Android, iOS y web**. Consume la API de `vinculatec-backend`.
+Un solo código para **Android, iOS y web**. Consume la API de `vinculatec` en Azure App Service.
 
 ## Requisitos
 

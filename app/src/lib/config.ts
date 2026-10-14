@@ -1,5 +1,5 @@
-/** Backend publicado en Azure App Service (usa la base de datos de Azure). */
-export const CLOUD_API = 'https://vinculatec-backend-b5befvcybsdwgta3.mexicocentral-01.azurewebsites.net';
+/** Backend publicado en Azure App Service. */
+export const CLOUD_API = 'https://vinculatec-gsa5c4hcgggwfcf9.mexicocentral-01.azurewebsites.net';
 
 /**
  * URL del backend: siempre el de Azure, en web y en el celular.

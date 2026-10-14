@@ -21,14 +21,14 @@ python -m venv .venv
 .venv\Scripts\activate            # en WSL/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 copy .env.example .env            # en WSL/Linux: cp .env.example .env
-                                  # y en .env pon la conexión a Azure PostgreSQL (DATABASE_URL)
+                                  # y en .env pon la conexión a Supabase PostgreSQL (DATABASE_URL)
 uvicorn app.main:app --reload --host 0.0.0.0
 ```
 
 - Swagger: http://localhost:8000/docs (botón **Authorize** → usuario `ana@tessfp.edu.mx` / `Demo12345`)
-- Pruebas: `pytest -q` (usan una base temporal propia; nunca tocan Azure)
-- La base de Azure ya tiene datos de demo (contraseña: Demo12345). `python seed.py --borrar-todo` la reinicia **borrando todo**
-- Base de datos en la nube (Azure Database for PostgreSQL): ver la sección **Base de datos en Azure** más abajo
+- Pruebas: `pytest -q` (configura `TEST_DATABASE_URL` para una base de pruebas aislada; nunca uses la URL de producción)
+- `python seed.py --borrar-todo` reinicia la base configurada **borrando todos sus datos**; no lo ejecutes contra producción
+- Base de datos en la nube: Supabase PostgreSQL, ver la sección **Base de datos en Supabase** más abajo
 
 > Para probar desde el celular en la misma red Wi-Fi, usa `--host 0.0.0.0` y apunta la app a `http://<IP-de-tu-PC>:8000`. En el emulador de Android, `localhost` es `10.0.2.2`.
 
@@ -99,21 +99,18 @@ seed.py                # datos de demostración
 
 ## Base de datos en Azure
 
-La única base de datos es **Azure Database for PostgreSQL – Flexible Server**. Las pruebas (`pytest`) usan otra base del mismo servidor, `vinculatec_test`, que borran y recrean; nunca tocan `vinculatec`.
+La base de producción es el proyecto **Vinculatec** de Supabase (`jthphirnqxblaokcaqqy`). El esquema está versionado en `supabase/migrations/`; el acceso de la app pasa por la API FastAPI.
 
-1. En el portal de Azure: **Crear un recurso → Azure Database for PostgreSQL → Servidor flexible**.
-   - Carga de trabajo: *Desarrollo* (el nivel más barato, Burstable B1ms).
-   - Autenticación: *Solo autenticación de PostgreSQL*; anota el usuario administrador y la contraseña.
-2. En **Redes**: acceso público y **Agregar la dirección IP del cliente actual** (tu PC). Si el backend se
-   publica también en Azure, activa *Permitir el acceso público desde cualquier servicio de Azure*.
-3. Cuando termine de crearse, en **Bases de datos → Agregar** crea la base `vinculatec`.
-4. En `backend/.env` (no se sube a GitHub) pon la conexión:
+1. En Supabase, abre **Connect** y copia la cadena **Session Pooler** (puerto `5432`). Usa el usuario y host que muestra el panel para ese proyecto.
+2. En desarrollo, guarda esa URL como `DATABASE_URL` en `backend/.env` (archivo local, no se sube a GitHub). En Azure App Service `vinculatec`, configura `DATABASE_URL` en **Settings → Environment variables / Application settings** y reinicia la app:
    ```
-   DATABASE_URL=postgresql+psycopg://USUARIO:CLAVE@NOMBRE-SERVIDOR.postgres.database.azure.com:5432/vinculatec?sslmode=require
+   DATABASE_URL=postgresql+psycopg://postgres.PROJECT_REF:CLAVE@HOST.pooler.supabase.com:5432/postgres?sslmode=require
    ```
-   Si la contraseña tiene `@ : / # ?`, codifícalos (`@` → `%40`, `#` → `%23`).
-5. Al arrancar `uvicorn` las tablas se crean solas. Para cargar los datos de demo (borra todo lo que haya):
-   `python seed.py --borrar-todo`
+   Sustituye los marcadores con los valores del panel y codifica caracteres especiales de la contraseña en la URL. No guardes la contraseña en GitHub ni en el código.
+3. Las tablas tienen RLS activado y sin políticas para bloquear el acceso público directo a través de la API de datos. FastAPI accede a PostgreSQL mediante `DATABASE_URL`.
+4. Para desplegar cambios de esquema, aplica y conserva las migraciones de `supabase/migrations/`. El arranque también crea tablas faltantes, pero no actualiza columnas existentes.
+
+> `seed.py --borrar-todo` elimina las tablas y los datos del destino configurado. Úsalo solo en una base desechable.
 
 ### Mapa de universidades (OpenStreetMap)
 
@@ -123,10 +120,7 @@ Para ubicar de una vez las organizaciones que ya existían: `python ubicar.py`.
 
 ### Si aparece "remaining connection slots are reserved…"
 
-El plan básico de Azure admite unas 35 conexiones para todo el equipo. Cada backend usa hasta 5, y cada
-reinicio de `--reload` puede dejar conexiones huérfanas. La base `vinculatec` las cierra sola tras 5 minutos
-de inactividad (`idle_session_timeout`); si urge liberarlas, en el portal de Azure → **Reiniciar** el servidor,
-o ejecuta en la base: `select pg_terminate_backend(pid) from pg_stat_activity where usename = current_user and state = 'idle' and pid <> pg_backend_pid();`
+El backend limita cada proceso a cinco conexiones SQLAlchemy (`pool_size=3`, `max_overflow=2`). Mantén ese límite bajo al escalar instancias y revisa el pool elegido en Supabase si aparecen errores de conexiones.
 
 ## Frontend
 

@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api/v1"
     DEBUG: bool = True
 
-    # Azure Database for PostgreSQL (obligatoria, en backend/.env), p. ej.:
-    # DATABASE_URL=postgresql+psycopg://usuario:clave@mi-servidor.postgres.database.azure.com:5432/vinculatec?sslmode=require
+    # Supabase PostgreSQL (obligatoria, en backend/.env), p. ej. Session Pooler:
+    # DATABASE_URL=postgresql+psycopg://postgres.<ref>:clave@<host>.pooler.supabase.com:5432/postgres?sslmode=require
     # Sin valor por defecto: la única base de la plataforma es la de Azure.
     DATABASE_URL: str = ""
 

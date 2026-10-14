@@ -1,4 +1,4 @@
-"""Motor y sesión de SQLAlchemy para Azure Database for PostgreSQL."""
+"""Motor y sesión de SQLAlchemy para Supabase PostgreSQL."""
 import json
 from collections.abc import Generator
 
@@ -9,15 +9,13 @@ from app.core.config import settings
 
 if not settings.DATABASE_URL.startswith("postgresql"):
     raise RuntimeError(
-        "Falta DATABASE_URL. Copia backend/.env.example como backend/.env y pon la conexión a Azure PostgreSQL "
-        "(pídela a quien administra la base; no se sube a GitHub)."
+        "Falta DATABASE_URL. Copia backend/.env.example como backend/.env y pon la conexión a Supabase PostgreSQL "
+        "(en Azure App Service, guárdala en Application settings; no la subas a GitHub)."
     )
 
-# Azure Database for PostgreSQL exige conexiones cifradas (SSL)
+# Exige conexiones cifradas (SSL) para conexiones PostgreSQL remotas.
 connect_args = {} if "sslmode=" in settings.DATABASE_URL else {"sslmode": "require"}
-# El plan básico de Azure admite ~35 conexiones para todos (backend de cada integrante, --reload,
-# scripts). Pocas por proceso, y se renuevan antes de que la base cierre las inactivas
-# (idle_session_timeout = 5 min en la base vinculatec).
+# Mantén pocas conexiones por proceso para evitar agotar el límite del pool de la base.
 pool_args = {"pool_size": 3, "max_overflow": 2, "pool_recycle": 240, "pool_timeout": 15}
 
 engine = create_engine(
