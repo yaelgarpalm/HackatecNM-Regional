@@ -31,6 +31,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:8081",
+        "https://vinculatec-app.vercel.app",
     ]
     # En desarrollo acepta cualquier puerto de localhost y de la red local (Expo web, pruebas desde el celular)
     CORS_ORIGIN_REGEX: str | None = r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?"
